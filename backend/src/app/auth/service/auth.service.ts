@@ -6,8 +6,11 @@ import {
     updateUserPassword
 } from "../../user/repository/users.repo";
 import {
-    CannotSignupAsSystemAdmin, IncorrectCredentials, InvalidOTPError,
-    RestaurantRequiredError, UserAlreadyExistsError
+    CannotSignupAsSystemAdmin,
+    IncorrectCredentials,
+    InvalidOTPError,
+    RestaurantRequiredError,
+    UserAlreadyExistsError
 } from "../errors";
 import {SystemRole} from "../../user/enums";
 import {
@@ -26,6 +29,12 @@ import {
 } from "../repository/password-reset.repo";
 import {restaurantService, RestaurantService} from "../../restaurant/service/restaurant.service";
 import {db} from "../../../common/knex/knex";
+import {
+    activateMemberByUserId,
+    createRestaurantMember,
+    findRestaurantMemberWithRole
+} from "../../rbac/repository/restaurant-member.repo";
+import {findBranchIdsByMemberId} from "../../rbac/repository/member-branch.repo";
 
 export class AuthService {
 
@@ -37,7 +46,6 @@ export class AuthService {
         }
 
         const existing = await findUserExistsByEmailOrPhone(data.email, data.phone);
-
         if(existing){
             throw UserAlreadyExistsError
         }
@@ -64,6 +72,8 @@ export class AuthService {
                 }
 
                 restaurant = await this.restaurantService.create(user.id, data.restaurant, trx);
+                // TODO: insert the member and set the member info in the jwt payload
+                //  await createRestaurantMember({restaurantId: restaurant.id, userId: user.id, roleId: 1, })
             }
 
             await trx.commit();
@@ -101,7 +111,21 @@ export class AuthService {
         if(!match){
             throw IncorrectCredentials;
         }
-        const payload ={userId: user.id, role: user.systemRole, email: user.email};
+
+        let restaurantMemberInfo = null;
+        if(user.systemRole == SystemRole.RESTAURANT_USER){
+            const memberInfo = await findRestaurantMemberWithRole(user.id);
+            const branchIds = await findBranchIdsByMemberId(memberInfo.member.id);
+
+            if(memberInfo){
+                restaurantMemberInfo = {
+                    restaurantId: memberInfo.member.restaurantId,
+                    restaurantRole: memberInfo.roleName,
+                    branchIds
+                }
+            }
+        }
+        const payload ={userId: user.id, role: user.systemRole, email: user.email, ...restaurantMemberInfo};
         const accessToken = createAccessToken(payload);
         const refreshToken = createRefreshToken(payload);
 
@@ -157,7 +181,9 @@ export class AuthService {
         }
         const hashedPassword = await hashPassword(data.newPassword);
         await updateUserPassword(user.id, hashedPassword);
-        await updatePasswordResetConsumedAt(reset.id)
+        await updatePasswordResetConsumedAt(reset.id);
+
+        return user;
     }
 
     refresh = async(refreshToken: string) => {
@@ -169,6 +195,10 @@ export class AuthService {
         return {accessToken};
     }
 
+    acceptInvite = async(data: ResetPasswordDTO )=> {
+        const user = await this.resetPassword(data)
+        await activateMemberByUserId(user.id)
+    }
 }
 
 export const authService = new AuthService(restaurantService);

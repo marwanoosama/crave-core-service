@@ -32,7 +32,10 @@ export async function findCategoriesByRestaurant(restaurantId: number): Promise<
 
 export async function createCategory(restaurantId: number, name: string, conn: Knex = db): Promise<ProductCategory> {
     const now = new Date();
-    const [row] = await conn("product_categories").insert({
+    // Ensure created_at and updated_at are always provided to satisfy NOT NULL constraints
+    // Use conn if provided, otherwise fall back to db
+    const effectiveConn = conn || db;
+    const [row] = await effectiveConn("product_categories").insert({
         restaurant_id: restaurantId,
         name,
         created_at: now,

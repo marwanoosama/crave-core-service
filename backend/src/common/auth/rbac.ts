@@ -55,8 +55,6 @@ export function requireRestaurantMember(paramName: string = 'restaurantId'){
             return res.status(500).json({"message": "something went wrong"});
         }
 
-        // restaurantId is stored in the JWT and may come back as a string (e.g. from a BIGINT column),
-        // so coerce both sides before comparing.
         const userRestaurantId = Number(req.user?.restaurantId);
         if(userRestaurantId !== restaurantId){
             if(req.user?.role == SystemRole.SYSTEM_ADMIN){
@@ -72,7 +70,7 @@ export function requireRestaurantMember(paramName: string = 'restaurantId'){
 }
 
 // check if restaurant member can access this branch
-export async function requireBranchAccess(paramName: string= 'branchId') {
+export function requireBranchAccess(paramName: string= 'branchId') {
     return async(req: Request, res: Response, next: NextFunction) => {
         if (req.user?.role == SystemRole.SYSTEM_ADMIN) {
             return next();

@@ -1,16 +1,12 @@
 import {ForgetPasswordDTO, LoginDTO, RegisterDTO, ResetPasswordDTO} from "../dto/auth.dto";
-import {
-    createUser,
-    findUserByEmail,
-    findUserExistsByEmailOrPhone,
-    updateUserPassword
-} from "../../user/repository/users.repo";
+import {findUserByEmail, updateUserPassword} from "../../user/repository/users.repo";
+import {userService, UserService} from "../../user/service/user.service";
+import {restaurantMemberService, RestaurantMemberService} from "../../rbac/service/restaurant-member.service";
 import {
     CannotSignupAsSystemAdmin,
     IncorrectCredentials,
     InvalidOTPError,
-    RestaurantRequiredError,
-    UserAlreadyExistsError
+    RestaurantRequiredError
 } from "../errors";
 import {SystemRole} from "../../user/enums";
 import {
@@ -31,39 +27,33 @@ import {restaurantService, RestaurantService} from "../../restaurant/service/res
 import {db} from "../../../common/knex/knex";
 import {
     activateMemberByUserId,
-    createRestaurantMember,
     findRestaurantMemberWithRole
 } from "../../rbac/repository/restaurant-member.repo";
 import {findBranchIdsByMemberId} from "../../rbac/repository/member-branch.repo";
 
 export class AuthService {
 
-    constructor(private readonly restaurantService: RestaurantService) {}
+    constructor(
+        private readonly restaurantService: RestaurantService,
+        private readonly userService: UserService,
+        private readonly memberService: RestaurantMemberService,
+    ) {}
 
     register= async(data: RegisterDTO) =>{
         if (data.role == SystemRole.SYSTEM_ADMIN) {
             throw CannotSignupAsSystemAdmin
         }
 
-        const existing = await findUserExistsByEmailOrPhone(data.email, data.phone);
-        if(existing){
-            throw UserAlreadyExistsError
-        }
-
-        const hashedPassword = await hashPassword(data.password);
-
-        const now = new Date();
         const trx = await db.transaction();
         let user, restaurant;
+        let restaurantMemberInfo: null | { restaurantId: number, restaurantRole: string, branchIds: number[] } = null;
         try {
-            user = await createUser({
+            user = await this.userService.create({
                 email: data.email,
                 phone: data.phone,
                 name: data.name,
-                passwordHash: hashedPassword,
+                password: data.password,
                 systemRole: data.role,
-                createdAt: now,
-                updatedAt: now,
             }, trx);
 
             if (data.role == SystemRole.RESTAURANT_USER) {
@@ -72,8 +62,13 @@ export class AuthService {
                 }
 
                 restaurant = await this.restaurantService.create(user.id, data.restaurant, trx);
-                // TODO: insert the member and set the member info in the jwt payload
-                //  await createRestaurantMember({restaurantId: restaurant.id, userId: user.id, roleId: 1, })
+                await this.memberService.createOwnerMember(restaurant.id, user.id, trx);
+
+                restaurantMemberInfo = {
+                    restaurantId: restaurant.id,
+                    restaurantRole: 'owner',
+                    branchIds: [],
+                }
             }
 
             await trx.commit();
@@ -82,7 +77,7 @@ export class AuthService {
             throw err;
         }
 
-        const payload ={userId: user.id, role: user.systemRole, email: user.email}; //
+        const payload ={userId: user.id, role: user.systemRole, email: user.email, ...restaurantMemberInfo};
         const accessToken = createAccessToken(payload);
         const refreshToken = createRefreshToken(payload);
 
@@ -201,4 +196,4 @@ export class AuthService {
     }
 }
 
-export const authService = new AuthService(restaurantService);
+export const authService = new AuthService(restaurantService, userService, restaurantMemberService);

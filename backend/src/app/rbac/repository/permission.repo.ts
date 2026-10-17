@@ -24,3 +24,14 @@ export async function getPermissionsByRoleName(roleName: string, trx?: Knex.Tran
         return `${entity.resource}:${entity.action}`; // core:product:create
     });
 }
+
+export async function getPermissionsDetailsByRoleName(roleName: string, conn: Knex = db){
+    const query = conn || db;
+    const rows = await query("permissions as p")
+        .select("p.resource as resource", "p.action as action")
+        .join("role_permissions as rp", "rp.permission_id", "p.id")
+        .join("roles as r", "r.id", "rp.role_id")
+        .where("r.name", roleName)
+
+    return rows.map(row => ({permission: `${row.resource}:${row.action}`}));
+}

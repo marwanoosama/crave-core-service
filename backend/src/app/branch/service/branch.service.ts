@@ -28,7 +28,7 @@ export class BranchService{
             throw RestaurantNotFoundError;
         }
 
-        if(role !== SystemRole.SYSTEM_ADMIN && userId !== restaurant.ownerId){
+        if(role !== SystemRole.SYSTEM_ADMIN && Number(userId) !== Number(restaurant.ownerId)){
             throw UnAuthorizedError;
         }
 

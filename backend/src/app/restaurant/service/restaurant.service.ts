@@ -11,12 +11,15 @@ import {RestaurantStatus} from "../enums";
 import {Knex} from "knex";
 import {OwnerAlreadyExistsError, RestaurantNotFoundError, UnAuthorizedError} from "../errors";
 import {SystemRole} from "../../user/enums";
-import {createUser, findUserExistsByEmailOrPhone} from "../../user/repository/users.repo";
-import {hashPassword} from "../../auth/utils";
+import {findUserExistsByEmailOrPhone} from "../../user/repository/users.repo";
+import {userService, UserService} from "../../user/service/user.service";
+import {restaurantMemberService, RestaurantMemberService} from "../../rbac/service/restaurant-member.service";
 import {CreateRestaurantDTO, UpdateRestaurantDTO, UpdateRestaurantStatusDTO} from "../dto/restaurant.dto";
 import {db} from "../../../common/knex/knex";
 
 export class RestaurantService{
+    constructor(private readonly userService: UserService, private readonly memberService: RestaurantMemberService) {}
+
     create= async (userId: number, data: RegisterRestaurantDTO, trx: Knex) => {
         const now = new Date();
 
@@ -44,19 +47,16 @@ export class RestaurantService{
             throw OwnerAlreadyExistsError;
         }
 
-        const hashedPassword = await hashPassword(data.owner.password);
         const now = new Date();
         const trx = await db.transaction();
 
         try {
-            const user = await createUser({
+            const user = await this.userService.create({
                 email: data.owner.email,
                 phone: data.owner.phone,
                 name: data.owner.name,
-                passwordHash: hashedPassword,
+                password: data.owner.password,
                 systemRole: SystemRole.RESTAURANT_USER,
-                createdAt: now,
-                updatedAt: now,
             }, trx);
 
             const restaurant = await createRestaurant(new Restaurant({
@@ -69,6 +69,8 @@ export class RestaurantService{
                 updatedAt: now,
                 statusUpdatedAt: now,
             }), trx);
+
+            await this.memberService.createOwnerMember(restaurant.id, user.id, trx);
 
             await trx.commit();
 
@@ -107,7 +109,7 @@ export class RestaurantService{
             throw RestaurantNotFoundError;
         }
 
-        if(role !== SystemRole.SYSTEM_ADMIN && userId !== restaurant.ownerId){
+        if(role !== SystemRole.SYSTEM_ADMIN && Number(userId) !== Number(restaurant.ownerId)){
             throw UnAuthorizedError;
         }
 
@@ -128,4 +130,4 @@ export class RestaurantService{
     }
 }
 
-export const restaurantService = new RestaurantService();
+export const restaurantService = new RestaurantService(userService, restaurantMemberService);

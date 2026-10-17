@@ -1,4 +1,5 @@
-import {IsEmail, IsNotEmpty, IsString, IsNumber, IsArray, IsOptional} from "class-validator";
+import {IsEmail, IsNotEmpty, IsString, IsNumber, IsArray, IsOptional, IsEnum} from "class-validator";
+import {MemberStatus} from "../enums";
 
 export class CreateRestaurantMemberDTO {
     @IsEmail()
@@ -19,5 +20,21 @@ export class CreateRestaurantMemberDTO {
 
     @IsArray()
     @IsOptional()
+    branchIds!: number[];
+}
+
+export class UpdateRestaurantMemberDto{
+    @IsString()
+    @IsOptional()
+    role!: string;
+
+    @IsEnum(MemberStatus)
+    @IsOptional()
+    status!: MemberStatus;
+}
+
+export class UpdateMemberBranchesDTO {
+    @IsArray()
+    @IsNumber({}, { each: true })
     branchIds!: number[];
 }

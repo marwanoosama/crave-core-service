@@ -1,8 +1,44 @@
-import {findUserById, updateUser} from "../repository/users.repo";
+import {Knex} from "knex";
+import {db} from "../../../common/knex/knex";
+import {
+    createUser,
+    findUserById,
+    findUserExistsByEmailOrPhone,
+    updateUser
+} from "../repository/users.repo";
 import {UserNotFoundError} from "../errors";
 import {UpdateUserDTO} from "../dto/user.dto";
+import {SystemRole} from "../enums";
+import {hashPassword} from "../../auth/utils";
+import {UserAlreadyExistsError} from "../../auth/errors";
+
+export interface CreateUserData {
+    email: string;
+    phone: string;
+    name: string;
+    password: string;
+    systemRole: SystemRole;
+}
 
 export class UserService {
+    create = async (data: CreateUserData, conn: Knex = db) => {
+        const existing = await findUserExistsByEmailOrPhone(data.email, data.phone);
+        if(existing){
+            throw UserAlreadyExistsError;
+        }
+
+        const now = new Date();
+        return await createUser({
+            email: data.email,
+            phone: data.phone,
+            name: data.name,
+            passwordHash: data.password ? await hashPassword(data.password) : "",
+            systemRole: data.systemRole,
+            createdAt: now,
+            updatedAt: now,
+        }, conn);
+    }
+
     getByUserId = async (id: number) => {
         const user = await findUserById(id);
         if(!user){

@@ -40,6 +40,21 @@ export async function activateMemberByUserId(userId: number, conn: Knex = db){
         .update({status: MemberStatus.ACTIVE, updated_at: new Date()});
 }
 
+export async function updateRestaurantMember(memberId: number, data: {roleId?: number; status?: string}, conn: Knex = db){
+    const updateData: any = {updated_at: new Date()};
+    if (data.roleId !== undefined) updateData.role_id = data.roleId;
+    if (data.status !== undefined) updateData.status = data.status;
+    await conn("restaurant_members").where("id", memberId).update(updateData);
+}
+
+export async function deleteRestaurantMember(memberId: number, conn: Knex = db){
+    const query = conn || db;
+    return query.transaction(async (trx) => {
+        await trx("member_branches").where("member_id", memberId).delete();
+        return trx("restaurant_members").where("id", memberId).delete();
+    });
+}
+
 export async function findRestaurantMemberWithRole(userId: number): Promise<{member: RestaurantMember; roleName:string;}> {
     const row = await db("restaurant_members as rm").select(
         ...MEMBER_COLUMNS.map(column => `rm.${column}`),
@@ -50,5 +65,52 @@ export async function findRestaurantMemberWithRole(userId: number): Promise<{mem
     return {
         member: toEntity(row),
         roleName: row.roleName,
+    };
+}
+
+export async function findRestaurantMembersByRestaurantId(restaurantId: number, conn: Knex = db){
+    const query = conn || db;
+
+    const rows = await query("restaurant_members as rm").select(
+        "rm.id as id",
+        "rm.status as status",
+        "u.id as user_id",
+        "u.email as email",
+        "u.name as name",
+        "u.phone as phone",
+        "r.name as role",
+        "r.display_name as role_display_name"
+
+    )
+        .innerJoin("users as u", "rm.user_id", "u.id")
+        .innerJoin("roles as r", "rm.role_id", "r.id")
+        .where("rm.restaurant_id", restaurantId)
+        .orderBy("rm.id");
+
+    return rows.map((row: any) => ({
+        id: row.id,
+        userId: row.user_id,
+        email: row.email,
+        name: row.name,
+        phone: row.phone,
+        role: row.role,
+        roleDisplayName: row.role_display_name,
+        status: row.status
+    }));
+}
+
+export async function findRestaurantMemberWithRoleName(memberId: number, conn: Knex = db){
+    const query = conn || db;
+
+    const row = await query("restaurant_members as rm")
+        .select(...MEMBER_COLUMNS.map(column => `rm.${column}`), "r.name as role_name")
+        .innerJoin("roles as r", "rm.role_id", "r.id")
+        .where("rm.id", memberId)
+        .first();
+
+    if (!row) return null;
+    return {
+        member: toEntity(row),
+        roleName: row.role_name
     };
 }

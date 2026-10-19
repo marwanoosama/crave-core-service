@@ -1,13 +1,16 @@
-import {authService, AuthService} from "../service/auth.service";
+import {AuthService} from "../service/auth.service";
 import {NextFunction, Request, Response} from "express";
-import {validateBody} from "../../../common/validation/validation";
+import {validateBody} from "../../../lib/validation/validation";
 import {ForgetPasswordDTO, LoginDTO, RegisterDTO, ResetPasswordDTO} from "../dto/auth.dto";
-import {setAuthCookies} from "../../../common/utils/cookie";
-import {env} from "../../../common/config/env";
-import {toMs} from "../../../common/utils/time";
+import {setAuthCookies} from "../../../lib/utils/cookie";
+import {env} from "../../../lib/config/env";
+import {toMs} from "../../../pkg/utils/time";
+import {inject, injectable} from "tsyringe";
+import {TOKENS} from "../../../lib/di/tokens";
 
+@injectable()
 export class AuthController{
-    constructor(private readonly authService: AuthService){
+    constructor(@inject(TOKENS.AuthService) private readonly authService: AuthService){
 
     }
 
@@ -90,5 +93,3 @@ export class AuthController{
         }
     }
 }
-
-export const authController = new AuthController(authService);

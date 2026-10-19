@@ -6,8 +6,10 @@ import {createProduct, findProductById, findProductsByBranch, findProductsByRest
 import {findCategoryByName, findCategoriesByRestaurant, createCategory} from "../repository/category.repository";
 import {updateBranchDetails} from "../repository/product-branch-details.repository";
 import {findById} from "../../restaurant/repository/restaurant.repo";
-import {db} from "../../../common/knex/knex";
+import {db} from "../../../lib/knex/knex";
+import {injectable} from "tsyringe";
 
+@injectable()
 export class ProductService {
 
     create = async (restaurantId: number, userId: number, userRole: SystemRole, data: CreateProductDTO) => {
@@ -120,4 +122,3 @@ export class ProductService {
     }
 }
 
-export const productService = new ProductService();

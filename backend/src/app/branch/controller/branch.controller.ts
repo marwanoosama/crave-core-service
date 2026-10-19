@@ -1,11 +1,14 @@
-import {branchService, BranchService} from "../service/branch.service";
+import {BranchService} from "../service/branch.service";
 import {NextFunction, Request, Response} from "express";
-import {validateBody} from "../../../common/validation/validation";
+import {validateBody} from "../../../lib/validation/validation";
 import {CreateBranchDTO, UpdateBranchDTO, UpdateBranchStatusDTO} from "../dto/branch.dto";
 import {SystemRole} from "../../user/enums";
+import {inject, injectable} from "tsyringe";
+import {TOKENS} from "../../../lib/di/tokens";
 
+@injectable()
 export class BranchController{
-    constructor(private readonly branchService: BranchService) {}
+    constructor(@inject(TOKENS.BranchService) private readonly branchService: BranchService) {}
 
     findNearby = async(req: Request, res: Response, next: NextFunction) =>{
         try{
@@ -56,5 +59,3 @@ export class BranchController{
         }
     }
 }
-
-export const branchController = new BranchController(branchService);

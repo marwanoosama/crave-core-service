@@ -1,5 +1,6 @@
 import {Knex} from "knex";
-import {db} from "../../../common/knex/knex";
+import {db} from "../../../lib/knex/knex";
+import {injectable} from "tsyringe";
 import {
     createUser,
     findUserById,
@@ -20,6 +21,7 @@ export interface CreateUserData {
     systemRole: SystemRole;
 }
 
+@injectable()
 export class UserService {
     create = async (data: CreateUserData, conn: Knex = db) => {
         const existing = await findUserExistsByEmailOrPhone(data.email, data.phone);
@@ -70,4 +72,3 @@ export class UserService {
     }
 }
 
-export const userService = new UserService();

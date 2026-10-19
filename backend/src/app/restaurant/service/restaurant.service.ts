@@ -12,13 +12,19 @@ import {Knex} from "knex";
 import {OwnerAlreadyExistsError, RestaurantNotFoundError, UnAuthorizedError} from "../errors";
 import {SystemRole} from "../../user/enums";
 import {findUserExistsByEmailOrPhone} from "../../user/repository/users.repo";
-import {userService, UserService} from "../../user/service/user.service";
-import {restaurantMemberService, RestaurantMemberService} from "../../rbac/service/restaurant-member.service";
+import {UserService} from "../../user/service/user.service";
+import {RestaurantMemberService} from "../../rbac/service/restaurant-member.service";
 import {CreateRestaurantDTO, UpdateRestaurantDTO, UpdateRestaurantStatusDTO} from "../dto/restaurant.dto";
-import {db} from "../../../common/knex/knex";
+import {db} from "../../../lib/knex/knex";
+import {inject, injectable} from "tsyringe";
+import {TOKENS} from "../../../lib/di/tokens";
 
+@injectable()
 export class RestaurantService{
-    constructor(private readonly userService: UserService, private readonly memberService: RestaurantMemberService) {}
+    constructor(
+        @inject(TOKENS.UserService) private readonly userService: UserService,
+        @inject(TOKENS.RestaurantMemberService) private readonly memberService: RestaurantMemberService,
+    ) {}
 
     create= async (userId: number, data: RegisterRestaurantDTO, trx: Knex) => {
         const now = new Date();
@@ -129,5 +135,3 @@ export class RestaurantService{
         return await updateRestaurantStatus(id, data.status);
     }
 }
-
-export const restaurantService = new RestaurantService(userService, restaurantMemberService);

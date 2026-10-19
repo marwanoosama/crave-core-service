@@ -1,12 +1,15 @@
 import {NextFunction, Request, Response} from "express";
-import {RestaurantService, restaurantService} from "../service/restaurant.service";
-import {validateBody} from "../../../common/validation/validation";
+import {RestaurantService} from "../service/restaurant.service";
+import {validateBody} from "../../../lib/validation/validation";
 import {CreateRestaurantDTO, UpdateRestaurantDTO, UpdateRestaurantStatusDTO} from "../dto/restaurant.dto";
 import {SystemRole} from "../../user/enums";
 import {updateRestaurant} from "../repository/restaurant.repo";
+import {inject, injectable} from "tsyringe";
+import {TOKENS} from "../../../lib/di/tokens";
 
+@injectable()
 export class RestaurantController {
-    constructor(private readonly restaurantService: RestaurantService) {}
+    constructor(@inject(TOKENS.RestaurantService) private readonly restaurantService: RestaurantService) {}
 
     create = async(req: Request, res: Response, next: NextFunction) => {
         try {
@@ -56,5 +59,3 @@ export class RestaurantController {
         }
     }
 }
-
-export const restaurantController = new RestaurantController(restaurantService)

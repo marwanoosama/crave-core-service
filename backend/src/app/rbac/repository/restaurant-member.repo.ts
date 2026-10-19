@@ -1,6 +1,6 @@
 import {RestaurantMember} from "../entity/restaurant-member.entity";
 import {Knex} from "knex";
-import {db} from "../../../common/knex/knex";
+import {db} from "../../../lib/knex/knex";
 import {MemberStatus} from "../enums";
 
 const MEMBER_COLUMNS = [

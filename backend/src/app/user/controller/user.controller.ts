@@ -1,10 +1,13 @@
-import {UserService, userService} from "../service/user.service";
+import {UserService} from "../service/user.service";
 import {NextFunction, Response, Request} from "express";
-import {validateBody} from "../../../common/validation/validation";
+import {validateBody} from "../../../lib/validation/validation";
 import {UpdateUserDTO} from "../dto/user.dto";
+import {inject, injectable} from "tsyringe";
+import {TOKENS} from "../../../lib/di/tokens";
 
+@injectable()
 export class UserController {
-    constructor(private readonly userService: UserService) {}
+    constructor(@inject(TOKENS.UserService) private readonly userService: UserService) {}
 
     getMe = async(req: Request, res: Response, next: NextFunction) => {
         try{
@@ -25,5 +28,3 @@ export class UserController {
         }
     }
 }
-
-export const userController = new UserController(userService);

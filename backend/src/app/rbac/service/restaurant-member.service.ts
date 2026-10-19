@@ -8,8 +8,8 @@ import {
     InvalidBranchIdsError, MemberNotFoundError, RoleNotFoundError
 } from "../errors";
 import {Knex} from "knex";
-import {db} from "../../../common/knex/knex";
-import {userService, UserService} from "../../user/service/user.service";
+import {db} from "../../../lib/knex/knex";
+import {UserService} from "../../user/service/user.service";
 import {findRoleByName} from "../repository/role.repo";
 import {SystemRole} from "../../user/enums";
 import {MemberStatus} from "../enums";
@@ -22,11 +22,15 @@ import {
 import {countBranchesByIdsAndRestaurant, setMemberBranches} from "../repository/member-branch.repo";
 import {generateOTP, hashOTP} from "../../auth/utils";
 import {createPasswordReset} from "../../auth/repository/password-reset.repo";
-import {toMs} from "../../../common/utils/time";
+import {toMs} from "../../../pkg/utils/time";
 import {getPermissionsDetailsByRoleName} from "../repository/permission.repo";
 
+import {inject, injectable} from "tsyringe";
+import {TOKENS} from "../../../lib/di/tokens";
+
+@injectable()
 export class RestaurantMemberService{
-    constructor(private readonly userService: UserService) {}
+    constructor(@inject(TOKENS.UserService) private readonly userService: UserService) {}
 
     async createRestaurantMember(restaurantId: number, data: CreateRestaurantMemberDTO){
         if(data.role == "owner"){
@@ -195,5 +199,3 @@ export class RestaurantMemberService{
         }
     }
 }
-
-export const restaurantMemberService = new RestaurantMemberService(userService);

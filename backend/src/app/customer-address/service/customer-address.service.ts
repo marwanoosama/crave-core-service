@@ -8,6 +8,7 @@ import {
     clearDefaultByUserId,
 } from "../repository/customer-address.repo";
 import {CreateAddressDTO, UpdateAddressDTO} from "../dto/customer-address.dto";
+import {injectable} from "tsyringe";
 
 function toResponse(address: any) {
     return {
@@ -25,6 +26,7 @@ function toResponse(address: any) {
     };
 }
 
+@injectable()
 export class CustomerAddressService {
 
     getByUserId = async (userId: number) => {
@@ -61,4 +63,3 @@ export class CustomerAddressService {
     }
 }
 
-export const customerAddressService = new CustomerAddressService();

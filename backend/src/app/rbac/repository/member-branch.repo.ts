@@ -1,6 +1,6 @@
 import {MemberBranch} from "../entity/member-branch.entity";
 import {Knex} from "knex";
-import {db} from "../../../common/knex/knex";
+import {db} from "../../../lib/knex/knex";
 
 // const MEMBER_COLUMNS = [
 //     "id", "restaurant_id", "user_id", "role_id", "status", "created_at", "updated_at"

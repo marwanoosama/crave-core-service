@@ -1,5 +1,5 @@
 import {User} from "../entity/user.entity";
-import {db} from "../../../common/knex/knex";
+import {db} from "../../../lib/knex/knex";
 import { Knex } from "knex";
 
 const USER_COLUMNS = [

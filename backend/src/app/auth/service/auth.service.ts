@@ -1,7 +1,7 @@
 import {ForgetPasswordDTO, LoginDTO, RegisterDTO, ResetPasswordDTO} from "../dto/auth.dto";
 import {findUserByEmail, updateUserPassword} from "../../user/repository/users.repo";
-import {userService, UserService} from "../../user/service/user.service";
-import {restaurantMemberService, RestaurantMemberService} from "../../rbac/service/restaurant-member.service";
+import {UserService} from "../../user/service/user.service";
+import {RestaurantMemberService} from "../../rbac/service/restaurant-member.service";
 import {
     CannotSignupAsSystemAdmin,
     IncorrectCredentials,
@@ -23,20 +23,23 @@ import {
     findLatestPasswordResetByUserId,
     updatePasswordResetConsumedAt
 } from "../repository/password-reset.repo";
-import {restaurantService, RestaurantService} from "../../restaurant/service/restaurant.service";
-import {db} from "../../../common/knex/knex";
+import {RestaurantService} from "../../restaurant/service/restaurant.service";
+import {db} from "../../../lib/knex/knex";
+import {inject, injectable} from "tsyringe";
+import {TOKENS} from "../../../lib/di/tokens";
 import {
     activateMemberByUserId,
     findRestaurantMemberWithRole
 } from "../../rbac/repository/restaurant-member.repo";
 import {findBranchIdsByMemberId} from "../../rbac/repository/member-branch.repo";
 
+@injectable()
 export class AuthService {
 
     constructor(
-        private readonly restaurantService: RestaurantService,
-        private readonly userService: UserService,
-        private readonly memberService: RestaurantMemberService,
+        @inject(TOKENS.RestaurantService) private readonly restaurantService: RestaurantService,
+        @inject(TOKENS.UserService) private readonly userService: UserService,
+        @inject(TOKENS.RestaurantMemberService) private readonly memberService: RestaurantMemberService,
     ) {}
 
     register= async(data: RegisterDTO) =>{
@@ -195,5 +198,3 @@ export class AuthService {
         await activateMemberByUserId(user.id)
     }
 }
-
-export const authService = new AuthService(restaurantService, userService, restaurantMemberService);

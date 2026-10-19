@@ -6,7 +6,11 @@
 import {Request, Response, NextFunction} from "express";
 import {NotAuthenticated} from "./errors";
 import {SystemRole} from "../../app/user/enums";
-import {permissionCacheService} from "../../app/rbac/service/permission-cache.service";
+import {container} from "../di/container";
+import {TOKENS} from "../di/tokens";
+import type {PermissionCacheService} from "../../app/rbac/service/permission-cache.service";
+
+const permissionCacheService = container.resolve<PermissionCacheService>(TOKENS.PermissionCacheService);
 
 export interface RBACOptions{
     resource: string;

@@ -11,7 +11,9 @@ import {
     updateBranchStatus
 } from "../repository/branch.repository";
 import {BranchNotFoundError} from "../errors";
+import {injectable} from "tsyringe";
 
+@injectable()
 export class BranchService{
 
     findNearby = async (lat:number, lng:number) => {
@@ -80,5 +82,3 @@ export class BranchService{
         return await updateBranchStatus(branchId, data);
     }
 }
-
-export const branchService = new BranchService();

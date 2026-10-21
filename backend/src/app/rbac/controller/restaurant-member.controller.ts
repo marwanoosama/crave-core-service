@@ -9,6 +9,7 @@ import {validateBody} from "../../../lib/validation/validation";
 import {validate} from "class-validator";
 import {inject, injectable} from "tsyringe";
 import {TOKENS} from "../../../lib/di/tokens";
+import {sendSuccess} from "../../../lib/http/response";
 
 @injectable()
 export class RestaurantMemberController {
@@ -18,7 +19,7 @@ export class RestaurantMemberController {
         try {
             const data = await validateBody(CreateRestaurantMemberDTO,req.body);
             const result = await this.restaurantMemberService.createRestaurantMember(Number(req.params.restaurantId), data);
-            res.status(200).send(result);
+            sendSuccess(res, result);
         }
         catch (error) {
             next(error);
@@ -28,7 +29,7 @@ export class RestaurantMemberController {
     listMembers = async(req: Request, res: Response, next: NextFunction) => {
         try{
             const result = await this.restaurantMemberService.listRestaurantMembers(Number(req.params.restaurantId));
-            res.status(200).send(result);
+            sendSuccess(res, result);
         }catch(error){
             next(error);
         }
@@ -38,7 +39,7 @@ export class RestaurantMemberController {
         try{
             const data = await validateBody(UpdateRestaurantMemberDto, req.body);
             const result = await this.restaurantMemberService.updateRestaurantMember(Number(req.params.restaurantId), Number(req.params.memberId), data);
-            res.status(200).send(result);
+            sendSuccess(res, result);
         }catch(error){
             next(error);
         }
@@ -47,7 +48,7 @@ export class RestaurantMemberController {
     deleteMember = async(req: Request, res: Response, next: NextFunction) => {
         try{
             const result = await this.restaurantMemberService.deleteRestaurantMember(Number(req.params.restaurantId), Number(req.params.memberId));
-            res.status(200).send(result);
+            sendSuccess(res, result);
         }catch(error){
             next(error);
         }
@@ -57,7 +58,7 @@ export class RestaurantMemberController {
         try{
             const data = await validateBody(UpdateMemberBranchesDTO, req.body);
             const result = await this.restaurantMemberService.updateRestaurantMemberBranches(Number(req.params.restaurantId), Number(req.params.memberId), data);
-            res.status(200).send(result);
+            sendSuccess(res, result);
         }catch(error){
             next(error);
         }
@@ -66,7 +67,7 @@ export class RestaurantMemberController {
     getRolePermissions = async(req: Request, res: Response, next: NextFunction) => {
         try{
             const result = await this.restaurantMemberService.getRolePermissions(req.params.role as string);
-            res.status(200).send(result);
+            sendSuccess(res, result);
         }catch(error){
             next(error);
         }

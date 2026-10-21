@@ -16,6 +16,7 @@ import {UserService} from "../../app/user/service/user.service";
 import {AuthService} from "../../app/auth/service/auth.service";
 import {PermissionCacheService} from "../../app/rbac/service/permission-cache.service";
 import {Logger} from "../logger/logger";
+import {cacheProvider} from "../cache/init";
 
 container.registerSingleton<Logger>(TOKENS.Logger, Logger);
 
@@ -37,6 +38,7 @@ container.registerSingleton(TOKENS.RestaurantMemberController, RestaurantMemberC
 container.registerSingleton(TOKENS.ProductController, ProductController);
 container.registerSingleton(TOKENS.CustomerAddressController, CustomerAddressController);
 
-// Re-export the tsyringe instance so the rest of the app resolves from one container.
+container.registerInstance(TOKENS.CacheProvider, cacheProvider)
+
 export {container};
 

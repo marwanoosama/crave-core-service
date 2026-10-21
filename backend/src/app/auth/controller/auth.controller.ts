@@ -7,6 +7,7 @@ import {env} from "../../../lib/config/env";
 import {toMs} from "../../../pkg/utils/time";
 import {inject, injectable} from "tsyringe";
 import {TOKENS} from "../../../lib/di/tokens";
+import {sendSuccess} from "../../../lib/http/response";
 
 @injectable()
 export class AuthController{
@@ -21,7 +22,7 @@ export class AuthController{
 
             setAuthCookies(res, result.accessToken, result.refreshToken);
 
-            res.status(201).json(result);
+            sendSuccess(res, result, 201);
         } catch(err) {
             next(err);
         }
@@ -34,7 +35,7 @@ export class AuthController{
 
             setAuthCookies(res, result.accessToken, result.refreshToken);
 
-            res.status(200).json(result)
+            sendSuccess(res, result)
         }
         catch (err) {
             next(err);
@@ -45,7 +46,8 @@ export class AuthController{
         try {
             const data = await validateBody(ForgetPasswordDTO, req.body);
             await this.authService.forgetPassword(data);
-            res.status(200).json({
+
+            sendSuccess(res, {
                 "message": "email sent with otp"
             });
         }catch(err) {
@@ -57,9 +59,9 @@ export class AuthController{
         try{
             const data = await validateBody(ResetPasswordDTO, req.body);
             await this.authService.resetPassword(data);
-            res.status(200).json({
-                "message": "Password reset successfully, please login again",
-            })
+            sendSuccess(res, {
+                "message": "password reset successfully, try again"
+            });
         }
         catch(err) {
             next(err);
@@ -70,9 +72,10 @@ export class AuthController{
         try{
             const data = await validateBody(ResetPasswordDTO, req.body);
             await this.authService.acceptInvite(data);
-            res.status(200).json({
-                "message": "Invitation accepted successfully, please login again",
-            })
+            sendSuccess(res, {
+                "message": "Invitation accepted successfully, please login again"
+            });
+
         }
         catch(err) {
             next(err);
@@ -87,7 +90,8 @@ export class AuthController{
                 secure: env.isProduction,
                 maxAge: toMs(1, 'h'),
             });
-            res.status(200).json({message: "success"});
+
+            sendSuccess(res, {message: "success"});
         } catch(err) {
             next(err);
         }

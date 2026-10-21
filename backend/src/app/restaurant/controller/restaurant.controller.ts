@@ -6,6 +6,7 @@ import {SystemRole} from "../../user/enums";
 import {updateRestaurant} from "../repository/restaurant.repo";
 import {inject, injectable} from "tsyringe";
 import {TOKENS} from "../../../lib/di/tokens";
+import {sendSuccess} from "../../../lib/http/response";
 
 @injectable()
 export class RestaurantController {
@@ -15,7 +16,7 @@ export class RestaurantController {
         try {
             const data = await validateBody(CreateRestaurantDTO, req.body);
             const result = await this.restaurantService.createWithOwner(req.user?.role! as SystemRole, data);
-            res.status(201).json({message: "Restaurant created", ...result});
+            sendSuccess(res, {message: "Restaurant created", ...result}, 201);
         } catch (err) {
             next(err);
         }
@@ -24,7 +25,7 @@ export class RestaurantController {
     getAll = async(req: Request, res: Response, next: NextFunction) => {
         try {
             const result = await this.restaurantService.findAll();
-            res.status(200).json({data: result});
+            sendSuccess(res, result);
         } catch (err) {
             next(err);
         }
@@ -33,7 +34,7 @@ export class RestaurantController {
     getById = async(req: Request, res: Response, next: NextFunction) => {
         try{
            const result = await this.restaurantService.getById(Number(req.params.id));
-            res.status(200).json(result);
+            sendSuccess(res, result);
         }catch(err){
             next(err);
         }
@@ -43,7 +44,7 @@ export class RestaurantController {
         try{
             const data = await validateBody(UpdateRestaurantDTO, req.body);
             const result = await this.restaurantService.update(Number(req.params.id), data, req.user?.role! as SystemRole, req.user?.userId!);
-            res.status(200).json({message: "Restaurant updated", restaurant: result});
+            sendSuccess(res, {message: "Restaurant updated", restaurant: result});
         }catch(err){
             next(err);
         }
@@ -53,7 +54,7 @@ export class RestaurantController {
         try{
             const data = await validateBody(UpdateRestaurantStatusDTO, req.body);
             const result = await this.restaurantService.updateStatus(Number(req.params.id), data, req.user?.role! as SystemRole);
-            res.status(200).json({message: "Restaurant updated", restaurant: result});
+            sendSuccess(res, {message: "Restaurant updated", restaurant: result});
         }catch(err){
             next(err);
         }

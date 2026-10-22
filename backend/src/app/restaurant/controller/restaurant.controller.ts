@@ -6,7 +6,8 @@ import {SystemRole} from "../../user/enums";
 import {updateRestaurant} from "../repository/restaurant.repo";
 import {inject, injectable} from "tsyringe";
 import {TOKENS} from "../../../lib/di/tokens";
-import {sendSuccess} from "../../../lib/http/response";
+import {sendPaginated, sendSuccess} from "../../../lib/http/response";
+import {parseFilters, parsePaginationQuery} from "../../../lib/http/pagination/parse-query";
 
 @injectable()
 export class RestaurantController {
@@ -24,8 +25,10 @@ export class RestaurantController {
 
     getAll = async(req: Request, res: Response, next: NextFunction) => {
         try {
-            const result = await this.restaurantService.findAll();
-            sendSuccess(res, result);
+            const params = parsePaginationQuery(req.query, ['createdAt', 'name', 'status']);
+            const filters = parseFilters(req.query, ['id', 'status', 'name']);
+            const result = await this.restaurantService.findAll(params, filters);
+            sendPaginated(res, result.data, result.meta);
         } catch (err) {
             next(err);
         }

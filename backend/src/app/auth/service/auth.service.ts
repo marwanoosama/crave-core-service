@@ -32,6 +32,8 @@ import {
     findRestaurantMemberWithRole
 } from "../../rbac/repository/restaurant-member.repo";
 import {findBranchIdsByMemberId} from "../../rbac/repository/member-branch.repo";
+import {IEmailProvider} from "../../../pkg/email/email.interface";
+import {passwordResetEmail} from "../templates/password-reset"
 
 @injectable()
 export class AuthService {
@@ -40,6 +42,7 @@ export class AuthService {
         @inject(TOKENS.RestaurantService) private readonly restaurantService: RestaurantService,
         @inject(TOKENS.UserService) private readonly userService: UserService,
         @inject(TOKENS.RestaurantMemberService) private readonly memberService: RestaurantMemberService,
+        @inject(TOKENS.EmailProvider) private readonly emailProvider: IEmailProvider
     ) {}
 
     register= async(data: RegisterDTO) =>{
@@ -157,9 +160,12 @@ export class AuthService {
         )
         // TODO: send email
         console.log(`mocked email sent ${otp}`)
+        const email = passwordResetEmail(otp);
+        await this.emailProvider.send(data.email, email.subject, email.html);
+
     }
 
-    resetPassword =  async(data: ResetPasswordDTO ) => {
+    resetPassword =  async(data: ResetPasswordDTO) => {
         const user = await findUserByEmail(data.email);
         if (!user) {
             throw InvalidOTPError
@@ -170,10 +176,7 @@ export class AuthService {
             throw InvalidOTPError
         }
         const inputOTPHash = hashOTP(data.otp)
-        console.log(inputOTPHash);
-        console.log(reset.otpHash);
 
-        console.log(reset.isExpired());
         if(inputOTPHash != reset.otpHash || reset.isExpired() ) {
             throw InvalidOTPError
         }
@@ -193,7 +196,7 @@ export class AuthService {
         return {accessToken};
     }
 
-    acceptInvite = async(data: ResetPasswordDTO )=> {
+    acceptInvite = async(data: ResetPasswordDTO) => {
         const user = await this.resetPassword(data)
         await activateMemberByUserId(user.id)
     }

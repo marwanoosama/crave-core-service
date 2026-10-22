@@ -12,12 +12,14 @@ import {
 } from "../repository/branch.repository";
 import {BranchNotFoundError} from "../errors";
 import {injectable} from "tsyringe";
+import {buildPaginationResult, FilterParams, PaginationParams} from "../../../lib/http/pagination/cursor-pagination";
 
 @injectable()
 export class BranchService{
 
-    findNearby = async (lat:number, lng:number) => {
-        return await findNearbyBranches(lat, lng);
+    findNearby = async (lat:number, lng:number, params: PaginationParams, filters: FilterParams[]) => {
+        const result = await findNearbyBranches(lat, lng, params, filters);
+        return buildPaginationResult(result, params.limit, params.sortBy);
     }
 
     findByRestaurant = async function(restaurantId: number){

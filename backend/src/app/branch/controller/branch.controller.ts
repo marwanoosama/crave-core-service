@@ -5,7 +5,8 @@ import {CreateBranchDTO, UpdateBranchDTO, UpdateBranchStatusDTO} from "../dto/br
 import {SystemRole} from "../../user/enums";
 import {inject, injectable} from "tsyringe";
 import {TOKENS} from "../../../lib/di/tokens";
-import {sendSuccess} from "../../../lib/http/response";
+import {sendPaginated, sendSuccess} from "../../../lib/http/response";
+import {parseFilters, parsePaginationQuery} from "../../../lib/http/pagination/parse-query";
 
 @injectable()
 export class BranchController{
@@ -13,8 +14,10 @@ export class BranchController{
 
     findNearby = async(req: Request, res: Response, next: NextFunction) =>{
         try{
-            const result = await this.branchService.findNearby(Number(req.query.lat), Number(req.query.lng));
-            sendSuccess(res, result);
+            const params = parsePaginationQuery(req.query, ['id', 'createdAt', 'restaurantName', 'label']);
+            const filters = parseFilters(req.query, ['id', 'restaurantId', 'addressText', 'label']);
+            const result = await this.branchService.findNearby(Number(req.query.lat), Number(req.query.lng), params, filters);
+            sendPaginated(res, result.data, result.meta);
         }catch(err){
             next(err);
         }

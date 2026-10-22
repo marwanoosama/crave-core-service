@@ -27,10 +27,16 @@ import {getPermissionsDetailsByRoleName} from "../repository/permission.repo";
 
 import {inject, injectable} from "tsyringe";
 import {TOKENS} from "../../../lib/di/tokens";
+import {IEmailProvider} from "../../../pkg/email/email.interface";
+import {passwordResetEmail} from "../../auth/templates/password-reset";
+import {memberInvitationEmail} from "../templates/member-invitation";
+
 
 @injectable()
 export class RestaurantMemberService{
-    constructor(@inject(TOKENS.UserService) private readonly userService: UserService) {}
+    constructor(@inject(TOKENS.UserService) private readonly userService: UserService,
+                @inject(TOKENS.EmailProvider) private readonly emailProvider: IEmailProvider
+    ) {}
 
     async createRestaurantMember(restaurantId: number, data: CreateRestaurantMemberDTO){
         if(data.role == "owner"){
@@ -86,6 +92,8 @@ export class RestaurantMemberService{
             )
             // TODO: send email
             console.log(`mocked email sent ${otp}`)
+            const email = memberInvitationEmail(otp, user.systemRole);
+            await this.emailProvider.send(data.email, email.subject, email.html);
 
             await trx.commit()
 

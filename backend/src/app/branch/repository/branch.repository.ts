@@ -1,6 +1,13 @@
 import {Knex} from "knex";
 import {db} from "../../../lib/knex/knex";
 import {Branch} from "../entity/branch.entity";
+import {Currency} from "../enums";
+import {
+    applyCursorPagination,
+    applyFilters,
+    FilterParams,
+    PaginationParams
+} from "../../../lib/http/pagination/cursor-pagination";
 
 const BRANCH_COLUMNS = ['id','restaurant_id','country_code','address_text','label','lat','lng',
     'is_active','opens_at','closes_at','accept_orders','created_at','updated_at',
@@ -85,24 +92,79 @@ export async function updateBranchStatus(id: number, data: {isActive?: boolean, 
     return toEntity(row);
 }
 
-export async function findNearbyBranches(lat: number, lng: number): Promise<Branch[]> {
-    const result = await db.raw(`
-       SELECT 
-       b.id,
-       b.restaurant_id,
-       b.address_text,
-       b.label,
-       b.lat,
-       b.lng,
-       b.is_active,
-       b.accept_orders,
-       b.currency,
-       r.name,
-       r.logo_url
-       FROM restaurant_branches b JOIN restaurants r ON  b.restaurant_id = r.id
-       WHERE b.is_active = true AND r.status ='active'
-       AND ST_DWithin(b.location, ST_MakePoint(?, ?)::geography, b.delivery_radius*1000)
-    `,[lng, lat]);
+export async function findNearbyBranches(lat: number, lng: number, params: PaginationParams, filters: FilterParams[]): Promise<NearbyBranch[]> {
+    // camelCase API field -> qualified DB column (bare id/created_at/name are
+    // ambiguous because this query joins restaurant_branches and restaurants;
+    // camelCase filter/sort fields must map to qualified snake_case columns)
+    const columnMap = {
+        id: "b.id",
+        label: "b.label",
+        addressText: "b.address_text",
+        restaurantId: "b.restaurant_id",
+        createdAt: "b.created_at",
+        restaurantName: "r.name"
+    }
 
-    return result.rows;
+    let query: Knex.QueryBuilder = db('restaurant_branches as b')
+        .select(
+            'b.id',
+            'b.restaurant_id as restaurant_id',
+            'b.address_text',
+            'b.label',
+            'b.lat',
+            'b.lng',
+            'b.is_active',
+            'b.accept_orders',
+            'b.currency',
+            'b.created_at',
+            'r.name',
+            'r.logo_url'
+        )
+        .join('restaurants as r', 'b.restaurant_id', 'r.id')
+        .where('b.is_active', true)
+        .where('r.status', 'active')
+        .whereRaw(
+            'ST_DWithin(b.location, ST_MakePoint(?, ?)::geography, b.delivery_radius * 1000)',
+            [lng, lat]
+        );
+
+    query = applyCursorPagination(query, params, columnMap);
+    query = applyFilters(query, filters, columnMap);
+
+    const rows: any[] = await query;
+
+    // inline mapping instead of toEntity(): the joined restaurant name/logo_url
+    // don't belong to the Branch entity — but every field must be mapped from
+    // snake_case to camelCase before leaving the repository.
+    return rows.map((row) => ({
+        id: row.id,
+        restaurantId: row.restaurant_id,
+        addressText: row.address_text,
+        label: row.label,
+        lat: row.lat,
+        lng: row.lng,
+        isActive: row.is_active,
+        acceptOrders: row.accept_orders,
+        currency: row.currency,
+        restaurantName: row.name,
+        logoURL: row.logo_url,
+        createdAt: row.created_at,
+    }));
+}
+
+// near-branches response shape: Branch fields (camelCase) plus the joined
+// restaurant name and logo_url (logoURL matches the Restaurant entity field name)
+export interface NearbyBranch {
+    id: number;
+    restaurantId: number;
+    addressText: string;
+    label: string;
+    lat: number;
+    lng: number;
+    isActive: boolean;
+    acceptOrders: boolean;
+    currency: Currency | null;
+    restaurantName: string;
+    logoURL: string;
+    createdAt: Date;
 }

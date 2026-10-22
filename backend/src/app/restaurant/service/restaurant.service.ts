@@ -18,6 +18,7 @@ import {CreateRestaurantDTO, UpdateRestaurantDTO, UpdateRestaurantStatusDTO} fro
 import {db} from "../../../lib/knex/knex";
 import {inject, injectable} from "tsyringe";
 import {TOKENS} from "../../../lib/di/tokens";
+import {buildPaginationResult, FilterParams, PaginationParams} from "../../../lib/http/pagination/cursor-pagination";
 
 @injectable()
 export class RestaurantService{
@@ -96,8 +97,9 @@ export class RestaurantService{
         }
     }
 
-    findAll = async() => {
-        return await findAll();
+    findAll = async(params: PaginationParams, filters: FilterParams[]) => {
+        const result = await findAll(params, filters);
+        return buildPaginationResult(result, params.limit, params.sortBy);
     }
 
     getById = async(id: number) => {

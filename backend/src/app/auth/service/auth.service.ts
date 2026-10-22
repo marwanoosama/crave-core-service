@@ -144,7 +144,7 @@ export class AuthService {
         }
     }
 
-    forgetPassword = async(data: ForgetPasswordDTO )=> {
+    forgetPassword = async(data: ForgetPasswordDTO)=> {
         const user = await findUserByEmail(data.email);
         if(!user) {
             return

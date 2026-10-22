@@ -31,7 +31,7 @@ export function idempotency(options: IdempotencyOptions){
                     return next();
                 }
                 return res.status(503).json({
-                    message: "Cannot resolve caching service"
+                    message: "cannot resolve caching service"
                 });
             }
 
@@ -46,7 +46,6 @@ export function idempotency(options: IdempotencyOptions){
                 if (res.statusCode >= 200 && res.statusCode < 300) {
                     cacheProvider.set(key, JSON.stringify(body), options.ttl);
                 }
-                res.setHeader("X-Cache", "MISS");
                 return originalJson(body);
             });
             next();

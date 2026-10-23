@@ -23,6 +23,12 @@ const schema = z.object({
     REDIS_HOST: z.string().default('localhost'),
     REDIS_PORT: z.string().default('6379'),
     REDIS_PASSWORD: z.string().default(""),
+    // order-service integration (implementation plan §0.5)
+    INTERNAL_API_KEY: z.string(),
+    RABBITMQ_URL: z.string(),
+    RABBITMQ_CORE_EVENTS_EXCHANGE: z.string().default('core.events'),
+    OUTBOX_DRAIN_CRON: z.string().default("* * * * * *"), // every second
+    OUTBOX_BATCH_SIZE: z.string().default("50"),
     MAILJET_API_KEY: z.string(),
     MAILJET_SECRET_KEY: z.string(),
     MAILJET_FROM_EMAIL: z.string(),
@@ -58,6 +64,18 @@ export const env = {
         host: parsed.REDIS_HOST,
         port: Number(parsed.REDIS_PORT),
         password: parsed.REDIS_PASSWORD
+    },
+    // shared secret, outbound calls order-service -> core send it as "api-key"
+    internal: {
+        apiKey: parsed.INTERNAL_API_KEY,
+    },
+    rabbitmq: {
+        url: parsed.RABBITMQ_URL,
+        coreEventsExchange: parsed.RABBITMQ_CORE_EVENTS_EXCHANGE,
+    },
+    outbox: {
+        drainCron: parsed.OUTBOX_DRAIN_CRON,
+        batchSize: Number(parsed.OUTBOX_BATCH_SIZE),
     },
     mailjet:{
         apiKey: parsed.MAILJET_API_KEY,

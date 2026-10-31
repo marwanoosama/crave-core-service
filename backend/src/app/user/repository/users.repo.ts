@@ -23,7 +23,7 @@ function toEntity(row:any) {
 
 export async function findUserById(id: number){
     const row = await db("users").select(USER_COLUMNS)
-        .where('id', id).first();
+        .where('id', id).whereNull("deleted_at").first();
 
     return row ? toEntity(row) : undefined;
 }

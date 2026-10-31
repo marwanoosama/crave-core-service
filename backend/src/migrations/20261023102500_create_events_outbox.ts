@@ -10,7 +10,7 @@ export async function up(knex: Knex): Promise<void> {
         CREATE TABLE events_outbox (
             id BIGSERIAL PRIMARY KEY,
             aggregate_type TEXT NOT NULL,
-            aggregate_id BIGINT NOT NULL,
+            aggregate_id TEXT NOT NULL,
             event_type TEXT NOT NULL,
             event_id UUID NOT NULL UNIQUE,
             payload JSONB NOT NULL,

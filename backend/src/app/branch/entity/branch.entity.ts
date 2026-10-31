@@ -15,6 +15,7 @@ export class Branch {
     createdAt: Date;
     updatedAt: Date;
     deliveryRadius: number; // km
+    deliveryFee: number; // minor units of the branch currency
     currency: Currency
     commission: number;
     location?: String;
@@ -34,6 +35,7 @@ export class Branch {
         this.createdAt = data.createdAt ?? new Date();
         this.updatedAt = data.updatedAt ?? new Date();
         this.deliveryRadius = data.deliveryRadius ?? 0;
+        this.deliveryFee = data.deliveryFee ?? 0;
         this.currency = data.currency!;
         this.commission = data.commission ?? 0;
     }

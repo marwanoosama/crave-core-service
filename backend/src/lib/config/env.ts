@@ -24,8 +24,8 @@ const schema = z.object({
     REDIS_PORT: z.string().default('6379'),
     REDIS_PASSWORD: z.string().default(""),
     // order-service integration (implementation plan §0.5)
-    INTERNAL_API_KEY: z.string(),
-    RABBITMQ_URL: z.string(),
+    INTERNAL_API_KEY: z.string().default(""),
+    RABBITMQ_URL: z.string().default("amqp://guest:guest@localhost:5672"),
     RABBITMQ_CORE_EVENTS_EXCHANGE: z.string().default('core.events'),
     OUTBOX_DRAIN_CRON: z.string().default("* * * * * *"), // every second
     OUTBOX_BATCH_SIZE: z.string().default("50"),
@@ -69,11 +69,10 @@ export const env = {
     internal: {
         apiKey: parsed.INTERNAL_API_KEY,
     },
-    rabbitmq: {
+    // RabbitMQ outbox publisher (worker process)
+    rabbit: {
         url: parsed.RABBITMQ_URL,
-        coreEventsExchange: parsed.RABBITMQ_CORE_EVENTS_EXCHANGE,
-    },
-    outbox: {
+        exchange: parsed.RABBITMQ_CORE_EVENTS_EXCHANGE,
         drainCron: parsed.OUTBOX_DRAIN_CRON,
         batchSize: Number(parsed.OUTBOX_BATCH_SIZE),
     },

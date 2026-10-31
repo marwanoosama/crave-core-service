@@ -32,3 +32,6 @@ export class Logger {
         this.log('debug', message, metadata);
     }
 }
+
+// Standalone instance for non-DI contexts (the outbox worker, for example).
+export const logger = new Logger();

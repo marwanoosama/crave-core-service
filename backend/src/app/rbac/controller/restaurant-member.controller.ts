@@ -10,6 +10,7 @@ import {validate} from "class-validator";
 import {inject, injectable} from "tsyringe";
 import {TOKENS} from "../../../lib/di/tokens";
 import {sendSuccess} from "../../../lib/http/response";
+import {RoleQueryRequiredError} from "../errors";
 
 @injectable()
 export class RestaurantMemberController {
@@ -67,6 +68,18 @@ export class RestaurantMemberController {
     getRolePermissions = async(req: Request, res: Response, next: NextFunction) => {
         try{
             const result = await this.restaurantMemberService.getRolePermissions(req.params.role as string);
+            sendSuccess(res, result);
+        }catch(error){
+            next(error);
+        }
+    }
+
+    getPermissionsByRole = async(req: Request, res: Response, next: NextFunction) => {
+        try{
+            const role = String(req.query.role ?? "");
+            if (!role) throw RoleQueryRequiredError;
+
+            const result = await this.restaurantMemberService.getPermissionsByRole(role);
             sendSuccess(res, result);
         }catch(error){
             next(error);

@@ -4,6 +4,9 @@ import {TOKENS} from "../../lib/di/tokens";
 import type {ProductController} from "./controller/product.controller";
 import {authenticate} from "../../lib/auth/guard";
 import {requireRestaurantMember, requireBranchAccess, rbac} from "../../lib/auth/rbac";
+import {requireInternalApiKey} from "../../lib/auth/api-key";
+import {idempotency} from "../../lib/idempotency/idempotency";
+import {toSeconds} from "../../pkg/utils/time";
 
 export const productRouter = Router();
 
@@ -35,4 +38,13 @@ productRouter.patch('/products/:id',
     requireBranchAccess('branchId'),
     rbac({resource:"core:product", action:"update"}),
     productController.update
+);
+
+// Internal (service-to-service)
+productRouter.get('/internal/branches/:id/products', requireInternalApiKey, productController.findByBranchAndIds);
+// Idempotent via Idempotency-Key so order-service retries never double-decrement stock.
+productRouter.post('/internal/branches/:id/reserve-stock',
+    requireInternalApiKey,
+    idempotency({strict: false, ttl: toSeconds(1, 'h')}),
+    productController.reserveStock
 );

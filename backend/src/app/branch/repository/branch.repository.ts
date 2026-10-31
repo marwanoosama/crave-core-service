@@ -11,7 +11,7 @@ import {
 
 const BRANCH_COLUMNS = ['id','restaurant_id','country_code','address_text','label','lat','lng',
     'is_active','opens_at','closes_at','accept_orders','created_at','updated_at',
-    'delivery_radius','currency','commission','location'];
+    'delivery_radius','delivery_fee','currency','commission','location'];
 
 function toEntity(row: any) {
     return new Branch({
@@ -29,6 +29,7 @@ function toEntity(row: any) {
         createdAt: row.created_at,
         updatedAt: row.updated_at,
         deliveryRadius: row.delivery_radius,
+        deliveryFee: row.delivery_fee,
         currency: row.currency,
         commission: row.commission,
         location: row.location
@@ -67,8 +68,8 @@ export async function findBranchById(id: number): Promise<Branch | undefined> {
     return row ? toEntity(row) : undefined;
 }
 
-export async function updateBranch(id: number, data: Record<string, any>): Promise<Branch> {
-    const [row] = await db("restaurant_branches").where("id", id).update({
+export async function updateBranch(id: number, data: Record<string, any>, conn: Knex = db): Promise<Branch> {
+    const [row] = await conn("restaurant_branches").where("id", id).update({
         label: data.label,
         address_text: data.addressText,
         lat: data.lat,
@@ -76,6 +77,7 @@ export async function updateBranch(id: number, data: Record<string, any>): Promi
         opens_at: data.opensAt,
         closes_at: data.closesAt,
         delivery_radius: data.deliveryRadius,
+        delivery_fee: data.deliveryFee,
         currency: data.currency,
         accept_orders: data.acceptOrders,
         updated_at: new Date(),
@@ -83,8 +85,8 @@ export async function updateBranch(id: number, data: Record<string, any>): Promi
     return toEntity(row);
 }
 
-export async function updateBranchStatus(id: number, data: {isActive?: boolean, commission?: number}): Promise<Branch> {
-    const [row] = await db("restaurant_branches").where("id", id).update({
+export async function updateBranchStatus(id: number, data: {isActive?: boolean, commission?: number}, conn: Knex = db): Promise<Branch> {
+    const [row] = await conn("restaurant_branches").where("id", id).update({
         is_active: data.isActive,
         commission: data.commission,
         updated_at: new Date(),

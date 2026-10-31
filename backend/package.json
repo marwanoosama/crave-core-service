@@ -7,8 +7,12 @@
     "build": "tsc",
     "dev": "tsx watch src/server",
     "start": "node dist/server.js",
-    "worker:dev": "tsx src/worker",
-    "worker": "node dist/worker.js"
+    "worker:dev": "tsx watch src/worker",
+    "worker": "node dist/worker.js",
+    "migrate": "knex --knexfile src/lib/knex/knexfile.ts migrate:latest",
+    "migrate:rollback": "knex --knexfile src/lib/knex/knexfile.ts migrate:rollback",
+    "migrate:status": "knex --knexfile src/lib/knex/knexfile.ts migrate:status",
+    "migrate:make": "knex --knexfile src/lib/knex/knexfile.ts migrate:make"
   },
   "keywords": [],
   "author": "",
@@ -17,6 +21,7 @@
     "@types/cors": "^2.8.19",
     "@types/helmet": "^0.0.48",
     "@types/ioredis": "^4.28.10",
+    "amqp-connection-manager": "^5.0.1",
     "amqplib": "^2.2.0",
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",

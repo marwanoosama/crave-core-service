@@ -4,6 +4,7 @@ import {TOKENS} from "../../lib/di/tokens";
 import type {BranchController} from "./controller/branch.controller";
 import {authenticate} from "../../lib/auth/guard";
 import {requireRestaurantMember, requireBranchAccess, rbac} from "../../lib/auth/rbac";
+import {requireInternalApiKey} from "../../lib/auth/api-key";
 import {withCache} from "../../lib/cache/withCache";
 
 export const branchRouter = Router();
@@ -29,3 +30,6 @@ branchRouter.patch('/branches/:id',
 
 // system_admin only (checked in service)
 branchRouter.patch('/branches/:id/status', authenticate, branchController.updateStatus);
+
+// Internal (service-to-service)
+branchRouter.get('/internal/branches/:id', requireInternalApiKey, branchController.findByIdWithRestaurant);

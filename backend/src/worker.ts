@@ -1,54 +1,60 @@
-import 'reflect-metadata';
-import {Cron} from 'croner';
-import {env} from './lib/config/env.js';
-import {db} from './lib/knex/knex.js';
-import {drainOutbox, connectOutboxPublisher, closeOutboxPublisher} from './lib/events/drain.js';
-import {Logger} from './lib/logger/logger.js';
+import "reflect-metadata";
+import {Cron} from "croner";
+import {env} from "./lib/config/env";
+import {logger} from "./lib/logger/logger";
+import {db} from "./lib/knex/knex";
+import {messageBroker} from "./lib/events/init";
+import {drainOutbox} from "./lib/events/outbox-drain";
 
-// Separate worker process (not the API): schedules drainOutbox() on
-// env.outbox.drainCron and declares the core.events topic exchange at boot.
-// SKIP LOCKED claiming makes N workers safe in parallel.
-
-const logger = new Logger();
-
-let running = false;
-
-async function runDrain() {
-    if (running) {
-        return; // never overlap runs
-    }
-    running = true;
-    try {
-        const published = await drainOutbox();
-        if (published > 0) {
-            logger.info(`outbox drained`, {published});
-        }
-    } catch (err) {
-        logger.error('outbox drain failed', {error: err instanceof Error ? err.message : err});
-    } finally {
-        running = false;
-    }
-}
-
+/**
+ * Outbox worker — runs independently of the HTTP server.
+ *
+ * API instances write to `events_outbox` in the same trx as their domain
+ * mutation. This worker process polls that table on a schedule and publishes
+ * pending rows to RabbitMQ with publisher confirms. Scales horizontally: the
+ * repository's `claimBatch` uses FOR UPDATE SKIP LOCKED so N workers can run
+ * in parallel without duplicate publishes.
+ */
 async function main() {
-    await connectOutboxPublisher();
-    logger.info(`outbox worker started, exchange ${env.rabbitmq.coreEventsExchange}, cron "${env.outbox.drainCron}", batch ${env.outbox.batchSize}`);
+    try {
+        await messageBroker.connect();
+        await messageBroker.declareExchange(env.rabbit.exchange);
+        logger.info("worker: broker connected, exchange declared", {exchange: env.rabbit.exchange});
+    } catch (err) {
+        logger.warn("worker: broker not reachable at boot — will retry on every drain", {
+            error: (err as Error)?.message ?? String(err),
+        });
+    }
 
-    new Cron(env.outbox.drainCron, runDrain);
-    await runDrain(); // drain immediately at boot (catches events queued while down)
+    const pattern = env.rabbit.drainCron;
+    const job = new Cron(pattern, {protect: true}, async () => {
+        try {
+            await drainOutbox();
+        } catch (err) {
+            logger.error("outbox drain error", {error: (err as Error).message});
+        }
+    });
+    logger.info("worker: outbox drain scheduled", {pattern, batchSize: env.rabbit.batchSize});
+
+    const shutdown = async () => {
+        logger.info("worker: shutdown requested");
+        job.stop();
+        try {
+            await messageBroker.close();
+        } catch (err) {
+            logger.warn("worker: broker close error", {error: (err as Error).message});
+        }
+        try {
+            await db.destroy();
+        } catch {}
+        process.exit(0);
+    };
+
+    process.on("SIGINT", shutdown);
+    process.on("SIGTERM", shutdown);
 }
 
-async function shutDown() {
-    await closeOutboxPublisher();
-    await db.destroy();
-    logger.info('outbox worker shut down');
-    process.exit(0);
-}
-
-process.on('SIGINT', shutDown);
-process.on('SIGTERM', shutDown);
-
-main().catch(err => {
-    logger.error('outbox worker failed to start', {error: err instanceof Error ? err.message : err});
+main().catch((err) => {
+    logger.error("worker: fatal", {error: (err as Error).message, stack: (err as Error).stack});
     process.exit(1);
 });

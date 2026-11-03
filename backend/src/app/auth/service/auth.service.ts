@@ -1,58 +1,56 @@
-import {ForgetPasswordDTO, LoginDTO, RegisterDTO, ResetPasswordDTO} from "../dto/auth.dto";
-import {findUserByEmail, updateUserPassword} from "../../user/repository/users.repo";
+import {injectable, inject} from "tsyringe";
+import {TOKENS} from "../../../lib/di/tokens";
+import {IEmailProvider} from "../../../pkg/email/email.interface";
+import {db} from "../../../lib/knex/knex";
+import {findBranchIdsByMemberId} from "../../rbac/repository/member-branch.repo";
+import {activateMemberByUserId, findRestaurantMemberWithRole} from "../../rbac/repository/restaurant_member.repo";
+import {MemberService} from "../../rbac/service/member.service";
+import {RestaurantService} from "../../restaurant/service/restaurant.service";
+import {SystemRole} from "../../user/enums";
 import {UserService} from "../../user/service/user.service";
-import {RestaurantMemberService} from "../../rbac/service/restaurant-member.service";
+import {findUserByEmail, updateUserPassword} from "../../user/repository/users.repo";
+import {RegisterDTO, LoginDTO, ForgetPasswordDTO, ResetPasswordDTO} from "../dto/auth.dto";
+import {passwordResetEmail} from "../templates/password-reset";
 import {
     CannotSignupAsSystemAdmin,
     IncorrectCredentials,
     InvalidOTPError,
-    RestaurantRequiredError
+    RestaurantDataRequiredError
 } from "../errors";
-import {SystemRole} from "../../user/enums";
-import {
-    comparePassword,
-    createAccessToken,
-    createRefreshToken,
-    generateOTP,
-    hashOTP,
-    hashPassword,
-    verifyRefreshToken,
-} from "../utils";
 import {
     createPasswordReset,
     findLatestPasswordResetByUserId,
     updatePasswordResetConsumedAt
 } from "../repository/password-reset.repo";
-import {RestaurantService} from "../../restaurant/service/restaurant.service";
-import {db} from "../../../lib/knex/knex";
-import {inject, injectable} from "tsyringe";
-import {TOKENS} from "../../../lib/di/tokens";
 import {
-    activateMemberByUserId,
-    findRestaurantMemberWithRole
-} from "../../rbac/repository/restaurant-member.repo";
-import {findBranchIdsByMemberId} from "../../rbac/repository/member-branch.repo";
-import {IEmailProvider} from "../../../pkg/email/email.interface";
-import {passwordResetEmail} from "../templates/password-reset"
+    hashPassword,
+    createAccessToken,
+    createRefreshToken,
+    comparePassword,
+    generateOTP,
+    hashOTP,
+    verifyRefreshToken
+} from "../utils";
+
 
 @injectable()
 export class AuthService {
-
     constructor(
         @inject(TOKENS.RestaurantService) private readonly restaurantService: RestaurantService,
         @inject(TOKENS.UserService) private readonly userService: UserService,
-        @inject(TOKENS.RestaurantMemberService) private readonly memberService: RestaurantMemberService,
-        @inject(TOKENS.EmailProvider) private readonly emailProvider: IEmailProvider
+        @inject(TOKENS.MemberService) private readonly memberService: MemberService,
+        @inject(TOKENS.EmailProvider) private readonly emailProvider: IEmailProvider,
     ) {}
 
-    register= async(data: RegisterDTO) =>{
+    register = async(data: RegisterDTO )=> {
         if (data.role == SystemRole.SYSTEM_ADMIN) {
             throw CannotSignupAsSystemAdmin
         }
 
         const trx = await db.transaction();
-        let user, restaurant;
-        let restaurantMemberInfo: null | { restaurantId: number, restaurantRole: string, branchIds: number[] } = null;
+        let user
+        let restaurant
+        let restaurantMemberInfo: {restaurantId?: number, restaurantRole?: string, branchIds?: number[]} = {};
         try {
             user = await this.userService.create({
                 email: data.email,
@@ -60,81 +58,79 @@ export class AuthService {
                 name: data.name,
                 password: data.password,
                 systemRole: data.role,
-            }, trx);
+            }, trx)
 
+            // check if the type of user is restaurant, then call restaurant service to create a new restaurant
             if (data.role == SystemRole.RESTAURANT_USER) {
                 if (data.restaurant == undefined) {
-                    throw RestaurantRequiredError;
+                    throw RestaurantDataRequiredError;
                 }
-
-                restaurant = await this.restaurantService.create(user.id, data.restaurant, trx);
+                restaurant = await this.restaurantService.create(user.id, data.restaurant, trx)
+                // insert the owner member via member service
                 await this.memberService.createOwnerMember(restaurant.id, user.id, trx);
-
                 restaurantMemberInfo = {
                     restaurantId: restaurant.id,
                     restaurantRole: 'owner',
                     branchIds: [],
-                }
+                };
             }
 
             await trx.commit();
-        }catch(err){
+        } catch (error) {
             await trx.rollback();
-            throw err;
+            throw error;
         }
 
-        const payload ={userId: user.id, role: user.systemRole, email: user.email, ...restaurantMemberInfo};
+        // create access token , refresh token
+        const payload = {userId: user.id, role: data.role, email: user.email, ...restaurantMemberInfo};
         const accessToken = createAccessToken(payload);
         const refreshToken = createRefreshToken(payload);
 
-        return{
+        return {
             message: "successfully registered user",
             accessToken,
             refreshToken,
-            user:{
+            user: {
                 id: user.id,
                 email: user.email,
                 phone: user.phone,
                 systemRole: user.systemRole,
                 createdAt: user.createdAt,
             },
-            restaurant: restaurant
+            restaurant
         }
     }
 
-    login = async(data: LoginDTO) =>{
+    login = async(data: LoginDTO )=> {
         const user = await findUserByEmail(data.email);
-        if(!user){
-            throw IncorrectCredentials;
+        if(!user) {
+            throw IncorrectCredentials
+        }
+        const match = await comparePassword(data.password,user.passwordHash)
+        if(!match) {
+            throw IncorrectCredentials
         }
 
-        const match = await comparePassword(data.password, user.passwordHash);
-        if(!match){
-            throw IncorrectCredentials;
-        }
-
-        let restaurantMemberInfo = null;
-        if(user.systemRole == SystemRole.RESTAURANT_USER){
-            const memberInfo = await findRestaurantMemberWithRole(user.id);
-            const branchIds = await findBranchIdsByMemberId(memberInfo.member.id);
-
-            if(memberInfo){
+        let restaurantMemberInfo = null
+        if(user.systemRole == SystemRole.RESTAURANT_USER) {
+            const memberData =  await findRestaurantMemberWithRole(user.id);
+            const branchIds = await findBranchIdsByMemberId(memberData.member.id);
+            if(memberData)  {
                 restaurantMemberInfo = {
-                    restaurantId: memberInfo.member.restaurantId,
-                    restaurantRole: memberInfo.roleName,
-                    branchIds
+                    restaurantId: memberData.member.restaurantId,
+                    restaurantRole: memberData.roleName,
+                    branchIds,
                 }
             }
         }
-        const payload ={userId: user.id, role: user.systemRole, email: user.email, ...restaurantMemberInfo};
+        const payload = {userId: user.id, role: user.systemRole, email: user.email, ...restaurantMemberInfo};
         const accessToken = createAccessToken(payload);
         const refreshToken = createRefreshToken(payload);
-
-        return{
-            message: "successfully logged in",
+        return {
+            message: "Login successful",
             accessToken,
             refreshToken,
-            user:{
+            user: {
                 id: user.id,
                 email: user.email,
                 phone: user.phone,
@@ -144,7 +140,7 @@ export class AuthService {
         }
     }
 
-    forgetPassword = async(data: ForgetPasswordDTO)=> {
+    forgetPassword = async(data: ForgetPasswordDTO )=> {
         const user = await findUserByEmail(data.email);
         if(!user) {
             return
@@ -158,20 +154,16 @@ export class AuthService {
                 createdAt: new Date(),
             }
         )
-        // TODO: send email
-        console.log(`mocked email sent ${otp}`)
         const email = passwordResetEmail(otp);
         await this.emailProvider.send(data.email, email.subject, email.html);
-
     }
 
-    resetPassword =  async(data: ResetPasswordDTO) => {
+    resetPassword =  async(data: ResetPasswordDTO ) => {
         const user = await findUserByEmail(data.email);
         if (!user) {
             throw InvalidOTPError
         }
         const reset = await findLatestPasswordResetByUserId(user.id);
-        console.log(reset)
         if(!reset) {
             throw InvalidOTPError
         }
@@ -182,7 +174,7 @@ export class AuthService {
         }
         const hashedPassword = await hashPassword(data.newPassword);
         await updateUserPassword(user.id, hashedPassword);
-        await updatePasswordResetConsumedAt(reset.id);
+        await updatePasswordResetConsumedAt(reset.id)
 
         return user;
     }
@@ -192,12 +184,20 @@ export class AuthService {
             throw IncorrectCredentials;
         }
         const payload = verifyRefreshToken(refreshToken);
-        const accessToken = createAccessToken({userId: payload.userId, role: payload.role, email: payload.email});
+        const accessToken = createAccessToken({
+            userId: payload.userId,
+            role: payload.role,
+            email: payload.email,
+            restaurantId: payload.restaurantId,
+            restaurantRole: payload.restaurantRole,
+            branchIds: payload.branchIds,
+        });
         return {accessToken};
     }
 
-    acceptInvite = async(data: ResetPasswordDTO) => {
+    acceptInvite = async(data: ResetPasswordDTO )=> {
         const user = await this.resetPassword(data)
+        // activate member
         await activateMemberByUserId(user.id)
     }
 }

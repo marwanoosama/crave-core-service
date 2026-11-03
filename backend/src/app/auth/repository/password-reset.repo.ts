@@ -1,26 +1,26 @@
+import {Knex} from "knex";
 import {PasswordReset} from "../entity/password-reset.entity";
 import {db} from "../../../lib/knex/knex";
-import {Knex} from "knex";
 
-const PASSWORD_RESET_COLUMNS = ['id','user_id','otp_hashed','expires_at','consumed_at','created_at'];
+const PASSWORD_RESET_COLUMNS = ['id','user_id','otp_hash','expires_at','consumed_at','created_at'];
 
 function toEntity(row: any) {
     return new PasswordReset({
-            id: row.id,
-            userId: row.user_id,
-            otpHash: row.otp_hashed,
-            expiresAt: row.expires_at,
-            consumedAt: row.consumed_at,
-            createdAt: row.created_at,
+        id: row.id,
+        userId: row.user_id,
+        otpHash: row.otp_hash,
+        expiresAt: row.expires_at,
+        consumedAt: row.consumed_at,
+        createdAt: row.created_at,
         }
     )
 }
 
-export async function createPasswordReset(passwordReset: Partial<PasswordReset>, trx?: Knex.Transaction) {
-    const query = trx || db;
+export async function createPasswordReset(passwordReset: Partial<PasswordReset>, trx?: Knex) {
+    const query = trx || db
     await query("password_resets").insert({
         user_id: passwordReset.userId,
-        otp_hashed: passwordReset.otpHash,
+        otp_hash: passwordReset.otpHash,
         expires_at: passwordReset.expiresAt,
         created_at: passwordReset.createdAt,
     })
@@ -28,8 +28,8 @@ export async function createPasswordReset(passwordReset: Partial<PasswordReset>,
 
 export async function findLatestPasswordResetByUserId(userId: number): Promise<PasswordReset | undefined> {
     const row = await db("password_resets").
-        select(PASSWORD_RESET_COLUMNS).
-        where("user_id", userId).
+    select(PASSWORD_RESET_COLUMNS).
+    where("user_id", userId).
         whereNull('consumed_at').
         orderBy('id','desc').
         first()

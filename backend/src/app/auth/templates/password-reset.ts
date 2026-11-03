@@ -1,101 +1,39 @@
-const BRAND = "Crave";
-const OTP_EXPIRY_MINUTES = 10;
-
-export const PASSWORD_RESET_OTP_EXPIRY_MINUTES = OTP_EXPIRY_MINUTES;
-
 export function passwordResetEmail(otp: string): { subject: string; html: string } {
-    const subject = `Your ${BRAND} password reset code`;
-
-    const html = `<!DOCTYPE html>
-<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:o="urn:schemas-microsoft-com:office:office">
+    return {
+        subject: "Reset Your Password - QuickBite",
+        html: `
+<!DOCTYPE html>
+<html>
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="x-apple-disable-message-reformatting">
-    <meta name="color-scheme" content="light">
-    <meta name="supported-color-schemes" content="light">
-    <!--[if mso]>
-    <xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml>
-    <![endif]-->
-    <style>
-        html, body { margin: 0 !important; padding: 0 !important; width: 100% !important; }
-        * { -ms-text-size-adjust: 100%; -webkit-text-size-adjust: 100%; }
-        table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; border-collapse: collapse; border-spacing: 0; }
-        img { border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Reset</title>
 </head>
-<body style="margin:0; padding:0; width:100%; background-color:#f4f5f7; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji'; -webkit-font-smoothing: antialiased;">
-    <div style="display:none; max-height:0; overflow:hidden; font-size:1px; line-height:1px; opacity:0;">
-        Use the code below to reset your password — it expires in ${OTP_EXPIRY_MINUTES} minutes.
-    </div>
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f5f7;">
+<body style="margin:0; padding:0; background-color:#f4f4f5; font-family:Arial, Helvetica, sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 0;">
         <tr>
-            <td align="center" style="padding:32px 16px;">
-                <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px; max-width:600px; width:100%;">
+            <td align="center">
+                <table width="480" cellpadding="0" cellspacing="0" style="background:#ffffff; border-radius:8px; padding:40px;">
                     <tr>
-                        <td style="padding:0 8px 16px 8px; text-align:left;">
-                            <span style="font-size:24px; line-height:28px; font-weight:bold; color:#111827;">${BRAND}<span style="color:#e8562a;">.</span></span>
+                        <td style="text-align:center; padding-bottom:24px;">
+                            <h1 style="margin:0; font-size:24px; color:#18181b;">Password Reset</h1>
                         </td>
                     </tr>
                     <tr>
-                        <td style="background-color:#ffffff; border:1px solid #e5e7eb; border-radius:12px;">
-                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
-                                <tr>
-                                    <td style="padding:40px 40px 8px 40px;">
-                                        <h1 style="margin:0; font-size:22px; line-height:30px; font-weight:bold; color:#111827;">Reset your password</h1>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td style="padding:8px 40px 24px 40px;">
-                                        <p style="margin:0; font-size:15px; line-height:24px; color:#4b5563;">
-                                            We received a request to reset the password for your ${BRAND} account.
-                                            Enter the code below to continue.
-                                        </p>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td style="padding:0 40px 24px 40px;">
-                                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
-                                            <tr>
-                                                <td align="center" style="background-color:#fef1ee; border:1px solid #f5cfc4; border-radius:10px; padding:20px 24px;">
-                                                    <span style="font-size:30px; line-height:36px; font-weight:bold; letter-spacing:8px; color:#e8562a; font-family:SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;">${otp}</span>
-                                                </td>
-                                            </tr>
-                                        </table>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td style="padding:0 40px 32px 40px;">
-                                        <p style="margin:0; font-size:14px; line-height:22px; color:#6b7280;">
-                                            This code expires in <strong style="color:#374151;">${OTP_EXPIRY_MINUTES} minutes</strong> and can be used once.
-                                        </p>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td style="padding:0 40px 40px 40px;">
-                                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%; border-top:1px solid #e5e7eb;">
-                                            <tr>
-                                                <td style="padding-top:24px;">
-                                                    <p style="margin:0; font-size:13px; line-height:20px; color:#6b7280;">
-                                                        If you didn't request a password reset, you can safely ignore this email —
-                                                        your password won't change until you enter the code yourself.
-                                                    </p>
-                                                </td>
-                                            </tr>
-                                        </table>
-                                    </td>
-                                </tr>
-                            </table>
+                        <td style="font-size:16px; color:#3f3f46; line-height:1.5; padding-bottom:24px;">
+                            You requested a password reset for your QuickBite account. Use the code below to complete the process.
                         </td>
                     </tr>
                     <tr>
-                        <td style="padding:24px 8px 8px 8px;">
-                            <p style="margin:0; font-size:12px; line-height:18px; color:#9ca3af; text-align:center;">
-                                ${BRAND} — hungry moments, handled.
-                                <br>
-                                © ${new Date().getFullYear()} ${BRAND}. All rights reserved.
-                            </p>
+                        <td align="center" style="padding-bottom:24px;">
+                            <div style="display:inline-block; background:#f4f4f5; border-radius:8px; padding:16px 32px; font-size:32px; font-weight:bold; letter-spacing:6px; color:#18181b;">
+                                ${otp}
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-size:14px; color:#71717a; line-height:1.5;">
+                            This code expires in <strong>10 minutes</strong>. If you did not request this, you can safely ignore this email.
                         </td>
                     </tr>
                 </table>
@@ -103,7 +41,6 @@ export function passwordResetEmail(otp: string): { subject: string; html: string
         </tr>
     </table>
 </body>
-</html>`;
-
-    return { subject, html };
+</html>`.trim(),
+    };
 }

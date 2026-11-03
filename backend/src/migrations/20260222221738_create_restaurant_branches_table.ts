@@ -7,6 +7,7 @@ export async function up(knex: Knex): Promise<void> {
         
         CREATE TYPE currency_enum AS ENUM('EGP','SAR');
         
+        
         CREATE TABLE restaurant_branches (
             id BIGSERIAL PRIMARY KEY,
             restaurant_id BIGINT NOT NULL,
@@ -38,8 +39,5 @@ export async function up(knex: Knex): Promise<void> {
 
 
 export async function down(knex: Knex): Promise<void> {
-    await knex.raw(`
-        DROP TABLE restaurant_branches;
-    `);
 }
 

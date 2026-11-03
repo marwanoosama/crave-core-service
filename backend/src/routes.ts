@@ -1,26 +1,20 @@
-import {Router} from 'express';
-import {healthRouter} from "./app/health/health.routes.js";
+import {Router} from "express";
 import {authRouter} from "./app/auth/routes";
-import {userRouter, internalUserRouter} from "./app/user/routes";
-import {customerAddressRouter, internalCustomerAddressRouter} from "./app/customer-address/routes";
-import {restaurantRouter} from "./app/restaurant/routes";
 import {branchRouter} from "./app/branch/routes";
-import {productRouter} from "./app/product/routes";
+import {healthRouter} from "./app/health/health.routes";
 import {rbacRouter} from "./app/rbac/routes";
+import {restaurantRouter} from "./app/restaurant/routes";
+import {userRouter} from "./app/user/routes";
+import {customerAddressRouter} from "./app/customer-address/routes";
+import {productRouter} from "./app/product/routes";
 
-export const router = Router();
+export const routes = Router();
 
-router.use("/health", healthRouter);
-router.use("/auth", authRouter);
-router.use("/user", userRouter);
-router.use("/customer-address", customerAddressRouter);
-router.use("/restaurant", restaurantRouter);
-router.use("/", branchRouter);
-router.use('/', productRouter)
-router.use('/', rbacRouter)
-
-// Internal service-to-service routes live under /api/internal/*.
-// Branch and product routers are already mounted at "/", so their internal
-// routes are registered directly inside those module routers.
-router.use('/', internalUserRouter);
-router.use('/', internalCustomerAddressRouter);
+routes.use("/health", healthRouter);
+routes.use('/user', userRouter)
+routes.use('/auth', authRouter);
+routes.use('/customer/addresses', customerAddressRouter);
+routes.use('/restaurants', restaurantRouter)
+routes.use('/', branchRouter)
+routes.use('/', productRouter)
+routes.use('/', rbacRouter)

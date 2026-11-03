@@ -1,11 +1,11 @@
 import {Request, Response, NextFunction} from "express";
+import {injectable, inject} from "tsyringe";
+import {TOKENS} from "../../../lib/di/tokens";
+import {sendSuccess} from "../../../lib/http/response";
+import {validateBody} from "../../../lib/validation/validate";
 import {SystemRole} from "../../user/enums";
 import {CreateProductDTO, UpdateProductDTO} from "../dto/product.dto";
 import {ProductService} from "../service/product.service";
-import {validateBody} from "../../../lib/validation/validation";
-import {inject, injectable} from "tsyringe";
-import {TOKENS} from "../../../lib/di/tokens";
-import {sendSuccess} from "../../../lib/http/response";
 import {InvalidReserveItemsError, MissingProductIdsQueryError} from "../errors";
 
 @injectable()
@@ -88,13 +88,8 @@ export class ProductController {
         try {
             const branchId = Number(req.params.id);
             const raw = typeof req.query.ids === "string" ? req.query.ids : "";
-            const ids = raw
-                .split(",")
-                .map((value) => Number(value.trim()))
-                .filter((value) => Number.isInteger(value) && value > 0);
-
+            const ids = raw.split(",").map((s) => Number(s.trim())).filter((n) => Number.isInteger(n) && n > 0);
             if (ids.length === 0) throw MissingProductIdsQueryError;
-
             const products = await this.productService.findByBranchAndIds(branchId, ids);
             sendSuccess(res, products);
         } catch (err) {
@@ -109,7 +104,6 @@ export class ProductController {
             if (!Array.isArray(items) || items.length === 0) {
                 throw InvalidReserveItemsError;
             }
-
             const result = await this.productService.reserveStock(branchId, items);
             sendSuccess(res, result);
         } catch (err) {
@@ -124,7 +118,6 @@ export class ProductController {
             if (!Array.isArray(items) || items.length === 0) {
                 throw InvalidReserveItemsError;
             }
-
             const result = await this.productService.releaseStock(branchId, items);
             sendSuccess(res, result);
         } catch (err) {
@@ -132,4 +125,3 @@ export class ProductController {
         }
     }
 }
-

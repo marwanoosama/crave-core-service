@@ -1,17 +1,17 @@
 import {Router} from "express";
-import {container} from "../../lib/di/container";
-import {TOKENS} from "../../lib/di/tokens";
-import type {UserController} from "./controller/user.controller";
 import {authenticate} from "../../lib/auth/guard";
 import {requireInternalApiKey} from "../../lib/auth/api-key";
+import {TOKENS} from "../../lib/di/tokens";
+import {container} from "../../lib/di/container";
+import {UserController} from "./controller/user.controller";
 
 export const userRouter = Router();
-export const internalUserRouter = Router();
 
 const userController = container.resolve<UserController>(TOKENS.UserController);
 
+// protect
 userRouter.get('/me', authenticate, userController.getMe);
 userRouter.patch('/me', authenticate, userController.updateMe);
 
-// Internal (service-to-service), mounted at /api/internal/*
-internalUserRouter.get('/internal/agents/:id', requireInternalApiKey, userController.getAgentById);
+// Internal (service-to-service)
+userRouter.get('/internal/agents/:id', requireInternalApiKey, userController.getAgentById);

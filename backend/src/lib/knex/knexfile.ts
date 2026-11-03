@@ -1,4 +1,4 @@
-import {env} from '../config/env';
+import {env} from '../config/env'
 import type { Knex } from 'knex';
 
 const config: Knex.Config = {
@@ -8,16 +8,15 @@ const config: Knex.Config = {
         port: env.db.port,
         user: env.db.username,
         password: env.db.password,
-        database: env.db.name
+        database: env.db.name,
     },
     pool: {
-        max: env.db.poolMax,
+        max: env.db.poolMax
     },
     migrations: {
-        directory: env.db.migrationsDirectory,
-        extension: env.db.migrationsExtension,
+        directory: env.db.migrationDirectory,
+        extension: env.db.migrationExtension
     }
 }
 
 export default config;
-

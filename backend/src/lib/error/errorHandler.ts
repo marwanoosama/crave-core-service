@@ -1,10 +1,6 @@
 import type {Request, Response, NextFunction} from "express";
+import {logger} from "../logger/logger";
 import type {AppError} from "./AppError";
-import {container} from "../di/container";
-import {TOKENS} from "../di/tokens";
-import type {Logger} from "../logger/logger";
-
-const logger = container.resolve<Logger>(TOKENS.Logger);
 
 export function errorHandler(err: AppError, req: Request, res: Response, _next: NextFunction) {
     const operational = err.isOperational;

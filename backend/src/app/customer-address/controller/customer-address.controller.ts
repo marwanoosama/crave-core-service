@@ -1,10 +1,10 @@
 import {NextFunction, Request, Response} from "express";
-import {CustomerAddressService} from "../service/customer-address.service";
-import {CreateAddressDTO, UpdateAddressDTO} from "../dto/customer-address.dto";
-import {validateBody} from "../../../lib/validation/validation";
-import {inject, injectable} from "tsyringe";
+import {injectable, inject} from "tsyringe";
 import {TOKENS} from "../../../lib/di/tokens";
 import {sendSuccess} from "../../../lib/http/response";
+import {CustomerAddressService} from "../service/customer-address.service";
+import {validateBody} from "../../../lib/validation/validate";
+import {CreateAddressDTO, UpdateAddressDTO} from "../dto/customer-address.dto";
 
 @injectable()
 export class CustomerAddressController {
@@ -59,4 +59,3 @@ export class CustomerAddressController {
         }
     }
 }
-

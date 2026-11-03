@@ -1,60 +1,28 @@
-import {RegisterRestaurantDTO} from "../../auth/dto/auth.dto";
-import {
-    createRestaurant,
-    findAll,
-    findById,
-    updateRestaurant,
-    updateRestaurantStatus
-} from "../repository/restaurant.repo";
-import {Restaurant} from "../entity/restaurant.entity";
-import {RestaurantStatus} from "../enums";
 import {Knex} from "knex";
-import {OwnerAlreadyExistsError, RestaurantNotFoundError, UnAuthorizedError} from "../errors";
-import {SystemRole} from "../../user/enums";
-import {findUserExistsByEmailOrPhone} from "../../user/repository/users.repo";
-import {findBranchesByRestaurant} from "../../branch/repository/branch.repository";
-import {UserService} from "../../user/service/user.service";
-import {RestaurantMemberService} from "../../rbac/service/restaurant-member.service";
-import {CreateRestaurantDTO, UpdateRestaurantDTO, UpdateRestaurantStatusDTO} from "../dto/restaurant.dto";
-import {db} from "../../../lib/knex/knex";
-import {inject, injectable} from "tsyringe";
+import {injectable, inject} from "tsyringe";
 import {TOKENS} from "../../../lib/di/tokens";
-import {buildPaginationResult, FilterParams, PaginationParams} from "../../../lib/http/pagination/cursor-pagination";
+import {PaginationParams, FilterParams, buildPaginationResult} from "../../../lib/http/pagination/cursor-pagination";
+import {db} from "../../../lib/knex/knex";
+import {UnAuthorisedError} from "../../../lib/auth/errors";
+import {RestaurantNotFoundError} from "../errors";
+import {RegisterRestaurantDTO} from "../../auth/dto/auth.dto";
+import {SystemRole} from "../../user/enums";
+import {UserService} from "../../user/service/user.service";
+import {RestaurantEntity} from "../entity/restaurant.entity";
+import {CreateRestaurantDTO, UpdateRestaurantDTO, UpdateRestaurantStatusDTO} from "../dto/restaurant.dto";
+import {RestaurantStatus} from "../enums";
 import {insertOutboxEvent} from "../../../lib/events/outbox.repo";
 import {EVENT_TYPES} from "../../../lib/events/event-types";
+import {createRestaurant, findAllRestaurants, findRestaurantById, updateRestaurant, updateRestaurantStatus} from "../repository/restaurant.repo";
+
 
 @injectable()
-export class RestaurantService{
-    constructor(
-        @inject(TOKENS.UserService) private readonly userService: UserService,
-        @inject(TOKENS.RestaurantMemberService) private readonly memberService: RestaurantMemberService,
-    ) {}
-
-    create= async (userId: number, data: RegisterRestaurantDTO, trx: Knex) => {
-        const now = new Date();
-
-        const restaurant = new Restaurant({
-            ownerId: userId,
-            name: data.name,
-            logoURL: data.logoUrl,
-            primaryCountry: data.primaryCountry,
-            status: RestaurantStatus.PENDING,
-            createdAt: now,
-            updatedAt: now,
-            statusUpdatedAt: now,
-        });
-
-        return await createRestaurant(restaurant, trx);
-    }
+export class RestaurantService {
+    constructor(@inject(TOKENS.UserService) private readonly userService: UserService) {}
 
     createWithOwner = async (userRole: SystemRole, data: CreateRestaurantDTO) => {
         if (userRole !== SystemRole.SYSTEM_ADMIN) {
-            throw UnAuthorizedError;
-        }
-
-        const existing = await findUserExistsByEmailOrPhone(data.owner.email, data.owner.phone);
-        if (existing) {
-            throw OwnerAlreadyExistsError;
+            throw UnAuthorisedError;
         }
 
         const now = new Date();
@@ -69,7 +37,7 @@ export class RestaurantService{
                 systemRole: SystemRole.RESTAURANT_USER,
             }, trx);
 
-            const restaurant = await createRestaurant(new Restaurant({
+            const restaurant = await createRestaurant(new RestaurantEntity({
                 ownerId: user.id,
                 name: data.name,
                 logoURL: data.logoUrl ?? "",
@@ -80,7 +48,11 @@ export class RestaurantService{
                 statusUpdatedAt: now,
             }), trx);
 
-            await this.memberService.createOwnerMember(restaurant.id, user.id, trx);
+            // resolve from container to avoid circular dependency
+            const {container: c} = require("../../../lib/di/container");
+            const {TOKENS: T} = require("../../../lib/di/tokens");
+            const memberSvc = c.resolve(T.MemberService);
+            await memberSvc.createOwnerMember(restaurant.id, user.id, trx);
 
             await trx.commit();
 
@@ -100,64 +72,71 @@ export class RestaurantService{
         }
     }
 
+    create = async (userId: number, data: RegisterRestaurantDTO, trx: Knex)=> {
+        const now = new Date();
+        const restaurant = new RestaurantEntity({
+            ownerId: userId,
+            name: data.name,
+            logoURL: data.logoURL,
+            primaryCountry: data.primaryCountry,
+            status: RestaurantStatus.PENDING,
+            createdAt: now,
+            updatedAt: now,
+            statusUpdatedAt: now
+        })
+        const result = await createRestaurant(restaurant, trx);
+
+        return result;
+    }
+
     findAll = async(params: PaginationParams, filters: FilterParams[]) => {
-        const result = await findAll(params, filters);
+        const result = await findAllRestaurants(params, filters);
         return buildPaginationResult(result, params.limit, params.sortBy);
     }
 
-    getById = async(id: number) => {
-        const restaurant = await findById(id);
-        if(restaurant == undefined){
+    findById = async(id: number) => {
+        const restaurant = await findRestaurantById(id);
+        if (!restaurant) {
             throw RestaurantNotFoundError;
         }
-
         return restaurant;
     }
 
-    update = async(id: number, data: UpdateRestaurantDTO, role: SystemRole, userId: number) => {
-        const restaurant = await findById(id);
-        if(restaurant == undefined){
+    update = async(id: number, userId: number, userRole: SystemRole, data: UpdateRestaurantDTO) => {
+        const restaurant = await findRestaurantById(id);
+        if (!restaurant) {
             throw RestaurantNotFoundError;
         }
-
-        if(role !== SystemRole.SYSTEM_ADMIN && Number(userId) !== Number(restaurant.ownerId)){
-            throw UnAuthorizedError;
+        if (userRole !== SystemRole.SYSTEM_ADMIN && Number(restaurant.ownerId) !== Number(userId)) {
+            throw UnAuthorisedError;
         }
-
         return await updateRestaurant(id, data);
     }
 
-    updateStatus = async(id: number, data: UpdateRestaurantStatusDTO, role: SystemRole) => {
-        const restaurant = await findById(id);
-        if(restaurant == undefined){
+    updateStatus = async(id: number, userRole: SystemRole, data: UpdateRestaurantStatusDTO) => {
+        if (userRole !== SystemRole.SYSTEM_ADMIN) {
+            throw UnAuthorisedError;
+        }
+        const restaurant = await findRestaurantById(id);
+        if (!restaurant) {
             throw RestaurantNotFoundError;
         }
-
-        if(role !== SystemRole.SYSTEM_ADMIN){
-            throw UnAuthorizedError;
-        }
-
         const trx = await db.transaction();
         try {
             const updated = await updateRestaurantStatus(id, data.status, trx);
-
-            if (data.status === RestaurantStatus.SUSPENDED) {
-                // branchIds ride along so order-service can drop its cached
-                // branch rows (they denormalise restaurantStatus).
-                const branches = await findBranchesByRestaurant(id);
+            if (data.status === "suspended") {
                 await insertOutboxEvent(trx, {
                     aggregateType: "restaurants",
                     aggregateId: id,
                     eventType: EVENT_TYPES.RESTAURANT_SUSPENDED,
-                    payload: {restaurantId: id, branchIds: branches.map((b) => Number(b.id))},
+                    payload: {restaurantId: id},
                 });
             }
-
             await trx.commit();
             return updated;
-        } catch (error) {
+        } catch (err) {
             await trx.rollback();
-            throw error;
+            throw err;
         }
     }
 }

@@ -1,20 +1,20 @@
+import path from 'path';
 import {config} from 'dotenv';
 import {z} from 'zod';
-import path from 'path';
 
-config({path: path.resolve(__dirname,'../../../.env')}); // reads from .env
+// C:\Users\ABDULLAH\Desktop\quickbite\core-service\.env
+config({path: path.resolve(__dirname,'../../../.env')});
 
 const schema = z.object({
-    NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
     PORT: z.string().default("3000"),
     DB_HOST: z.string().default("localhost"),
     DB_PORT: z.string().default("5432"),
     DB_USERNAME: z.string().default("postgres"),
     DB_PASSWORD: z.string(),
     DB_NAME: z.string(),
-    DB_POOL_MAX: z.string().default("10"),
-    DB_MIGRATIONS_DIRECTORY: z.string(),
-    DB_MIGRATIONS_EXTENSION: z.string(),
+    DB_POOL_MAX: z.string().default('10'),
+    DB_MIGRATION_DIRECTORY: z.string(),
+    DB_MIGRATION_EXTENSION: z.string(),
     ACCESS_SECRET: z.string(),
     REFRESH_SECRET: z.string(),
     ACCESS_EXPIRES_IN: z.string(),
@@ -23,33 +23,35 @@ const schema = z.object({
     REDIS_HOST: z.string().default('localhost'),
     REDIS_PORT: z.string().default('6379'),
     REDIS_PASSWORD: z.string().default(""),
-    // order-service integration (implementation plan §0.5)
-    INTERNAL_API_KEY: z.string().default(""),
-    RABBITMQ_URL: z.string().default("amqp://guest:guest@localhost:5672"),
-    RABBITMQ_CORE_EVENTS_EXCHANGE: z.string().default('core.events'),
-    OUTBOX_DRAIN_CRON: z.string().default("* * * * * *"), // every second
-    OUTBOX_BATCH_SIZE: z.string().default("50"),
     MAILJET_API_KEY: z.string(),
     MAILJET_SECRET_KEY: z.string(),
     MAILJET_FROM_EMAIL: z.string(),
     MAILJET_FROM_NAME: z.string(),
-})
+
+    // Shared secret checked by requireInternalApiKey on every /api/internal/* request.
+    INTERNAL_API_KEY: z.string().default(""),
+
+    // RabbitMQ — used by the outbox worker.
+    RABBITMQ_URL: z.string().default("amqp://guest:guest@localhost:5672"),
+    RABBITMQ_CORE_EVENTS_EXCHANGE: z.string().default("core.events"),
+    // Cron expression for the outbox drain schedule. 6-field form; "* * * * * *" = every second.
+    OUTBOX_DRAIN_CRON: z.string().default("* * * * * *"),
+    OUTBOX_BATCH_SIZE: z.string().default("50"),
+});
 
 const parsed = schema.parse(process.env);
 
 export const env = {
-    nodeEnv: parsed.NODE_ENV,
-    isProduction: parsed.NODE_ENV === "production",
     port: Number(parsed.PORT),
     db: {
-        host: parsed.DB_HOST,
-        port: Number(parsed.DB_PORT),
-        username: parsed.DB_USERNAME,
-        password: parsed.DB_PASSWORD,
-        name: parsed.DB_NAME,
-        poolMax: Number(parsed.DB_POOL_MAX),
-        migrationsDirectory: path.resolve(__dirname,"../../../",parsed.DB_MIGRATIONS_DIRECTORY),
-        migrationsExtension: parsed.DB_MIGRATIONS_EXTENSION,
+       host: parsed.DB_HOST,
+       port: Number(parsed.DB_PORT),
+       username: parsed.DB_USERNAME,
+       password: parsed.DB_PASSWORD,
+       name: parsed.DB_NAME,
+       poolMax: Number(parsed.DB_POOL_MAX),
+        migrationDirectory: path.resolve(__dirname,"../../../",parsed.DB_MIGRATION_DIRECTORY),
+        migrationExtension: parsed.DB_MIGRATION_EXTENSION,
     },
     jwt: {
         refreshSecret: parsed.REFRESH_SECRET,
@@ -57,31 +59,29 @@ export const env = {
         accessExpiresIn: parsed.ACCESS_EXPIRES_IN,
         refreshExpiresIn: parsed.REFRESH_EXPIRES_IN,
     },
+    isProduction: process.env.NODE_ENV === "production",
     cors: {
         origins: parsed.CORS_ORIGINS.split(','),
     },
-    redis:{
+    // redis
+    redis: {
         host: parsed.REDIS_HOST,
         port: Number(parsed.REDIS_PORT),
-        password: parsed.REDIS_PASSWORD
+        password: parsed.REDIS_PASSWORD,
     },
-    // shared secret, outbound calls order-service -> core send it as "api-key"
+    mailjet: {
+        apiKey: parsed.MAILJET_API_KEY,
+        secretKey: parsed.MAILJET_SECRET_KEY,
+        fromEmail: parsed.MAILJET_FROM_EMAIL,
+        fromName: parsed.MAILJET_FROM_NAME,
+    },
     internal: {
         apiKey: parsed.INTERNAL_API_KEY,
     },
-    // RabbitMQ outbox publisher (worker process)
     rabbit: {
         url: parsed.RABBITMQ_URL,
         exchange: parsed.RABBITMQ_CORE_EVENTS_EXCHANGE,
         drainCron: parsed.OUTBOX_DRAIN_CRON,
         batchSize: Number(parsed.OUTBOX_BATCH_SIZE),
     },
-    mailjet:{
-        apiKey: parsed.MAILJET_API_KEY,
-        secretKey: parsed.MAILJET_SECRET_KEY,
-        fromEmail: parsed.MAILJET_FROM_EMAIL,
-        fromName: parsed.MAILJET_FROM_NAME
-    }
 }
-
-

@@ -1,4 +1,4 @@
-export class Role{
+export class Role {
     id: number;
     name: string;
     displayName: string;
@@ -14,4 +14,5 @@ export class Role{
         this.createdAt = data.createdAt ?? new Date();
         this.updatedAt = data.updatedAt ?? new Date();
     }
+
 }

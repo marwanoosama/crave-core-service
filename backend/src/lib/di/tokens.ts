@@ -1,26 +1,23 @@
 export const TOKENS = {
-    // services
+    // Services
     AuthService: Symbol.for("AuthService"),
     UserService: Symbol.for("UserService"),
     RestaurantService: Symbol.for("RestaurantService"),
     BranchService: Symbol.for("BranchService"),
-    RestaurantMemberService: Symbol.for("RestaurantMemberService"),
+    MemberService: Symbol.for("MemberService"),
     ProductService: Symbol.for("ProductService"),
     CustomerAddressService: Symbol.for("CustomerAddressService"),
     PermissionCacheService: Symbol.for("PermissionCacheService"),
-
-    // controllers
+    // Controllers
     AuthController: Symbol.for("AuthController"),
     UserController: Symbol.for("UserController"),
     RestaurantController: Symbol.for("RestaurantController"),
     BranchController: Symbol.for("BranchController"),
-    RestaurantMemberController: Symbol.for("RestaurantMemberController"),
+    MemberController: Symbol.for("MemberController"),
     ProductController: Symbol.for("ProductController"),
     CustomerAddressController: Symbol.for("CustomerAddressController"),
-
-
-    // infra
+    // Lib/infra/
     Logger: Symbol.for("Logger"),
     CacheProvider: Symbol.for("CacheProvider"),
-    EmailProvider: Symbol.for("MailjetEmailProvider"),
+    EmailProvider: Symbol.for("EmailProvider"),
 }

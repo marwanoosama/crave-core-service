@@ -14,7 +14,10 @@ function toEntity(row: any): Role {
     });
 }
 
-export async function findRoleByName(name: string, trx?: Knex.Transaction): Promise<number | null> {
+export async function findRoleByName(
+    name: string,
+    trx?: Knex.Transaction
+): Promise<number | null> {
     const query = trx || db;
     const row = await query("roles")
         .select('id')

@@ -1,4 +1,6 @@
 {
+  // Visit https://aka.ms/tsconfig to read more about this file
+  // require
   "compilerOptions": {
     "target": "ES2022",
     "module": "NodeNext",
@@ -11,7 +13,8 @@
     "forceConsistentCasingInFileNames": false,
     "noImplicitAny": true,
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
+    "emitDecoratorMetadata": true
   },
   "include": ["src"]
 }
+//

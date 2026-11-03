@@ -1,10 +1,10 @@
 import {Response} from "express";
 import {PaginationMeta} from "./pagination/cursor-pagination";
 
-export interface ApiResponse<T =unknown>{
+export interface ApiResponse <T =unknown> {
     success: boolean;
     data?: T;
-    meta?: object;
+    meta?: Object;
 }
 
 export function sendSuccess<T>(res: Response,data: T, statusCode = 200, meta?: Object) {

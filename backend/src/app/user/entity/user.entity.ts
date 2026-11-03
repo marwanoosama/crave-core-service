@@ -1,6 +1,6 @@
 import {SystemRole} from "../enums";
 
-export class User{
+export class User {
     id: number;
     email: string;
     phone: string;
@@ -11,8 +11,7 @@ export class User{
     createdAt: Date;
     updatedAt: Date;
 
-
-    constructor(data: Partial<User>) {
+    constructor(data: Partial <User>) {
         this.id = data.id!;
         this.email = data.email!;
         this.phone = data.phone!;

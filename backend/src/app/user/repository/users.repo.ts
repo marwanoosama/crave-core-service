@@ -1,39 +1,39 @@
-import {User} from "../entity/user.entity";
+import {Knex} from "knex";
 import {db} from "../../../lib/knex/knex";
-import { Knex } from "knex";
+import {User} from "../entity/user.entity";
+
 
 const USER_COLUMNS = [
-    "id", "email", "phone", "name", "password_hash", "system_role", "created_at", "updated_at", "deleted_at"
+    "id","email","phone","name","password_hash","system_role","created_at","updated_at","deleted_at"
 ]
 
 function toEntity(row:any) {
     return new User({
-            id: row.id,
-            email: row.email,
-            phone: row.phone,
-            name: row.name,
-            passwordHash: row.password_hash,
-            systemRole: row.system_role,
-            createdAt: row.created_at,
-            updatedAt: row.updated_at,
-            deletedAt: row.deleted_at,
+        id: row.id,
+        email: row.email,
+        phone: row.phone,
+        name: row.name,
+        passwordHash: row.password_hash,
+        systemRole: row.system_role,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        deletedAt: row.deleted_at,
         }
     );
 }
-
-export async function findUserById(id: number){
-    const row = await db("users").select(USER_COLUMNS)
-        .where('id', id).whereNull("deleted_at").first();
-
-    return row ? toEntity(row) : undefined;
-}
-
 export async function findUserByEmail(email: string): Promise<User | undefined> {
     const row = await db("users").select(
         USER_COLUMNS
     ).where("email", email).whereNull("deleted_at").first();
 
-    console.log(row);
+    return row ? toEntity(row) : undefined;
+}
+
+export async function findUserById(id: number): Promise<User | undefined> {
+    const row = await db("users").select(
+        USER_COLUMNS
+    ).where("id", id).whereNull("deleted_at").first();
+
     return row ? toEntity(row) : undefined;
 }
 
@@ -55,7 +55,7 @@ export async function findUserExistsByEmail(email: string): Promise<Boolean> {
     return result.rows[0].exists;
 }
 
-export async function createUser(user: Partial<User>, conn: Knex = db): Promise<User> {
+export async function createUser(user:Partial<User>, conn: Knex = db): Promise<User> {
     const [row] = await conn("users").insert({
         email: user.email,
         phone: user.phone,

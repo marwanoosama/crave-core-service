@@ -4,5 +4,5 @@ import {env} from "../config/env";
 export const cacheProvider = new RedisCacheProvider({
     host: env.redis.host,
     port: env.redis.port,
-    password: env.redis.password || undefined
+    password: env.redis.password ||undefined
 });

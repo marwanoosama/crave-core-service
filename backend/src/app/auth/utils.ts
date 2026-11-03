@@ -1,8 +1,7 @@
-import bcrypt from 'bcrypt';
+    import bcrypt from 'bcrypt';
 import jwt, {SignOptions} from "jsonwebtoken";
 import {env} from "../../lib/config/env";
 import crypto from "crypto";
-import {Response} from "express";
 
 export async function hashPassword(password: string): Promise<string> {
     return bcrypt.hash(password, 10);
@@ -28,16 +27,16 @@ export function createRefreshToken(payload: JwtPayload) : string {
     return jwt.sign(payload,env.jwt.refreshSecret, options);
 }
 
-export function comparePassword(passwordInput: string, hashedPassword: string) {
-    return bcrypt.compare(passwordInput, hashedPassword);
-}
-
 export function verifyAccessToken(token: string): JwtPayload {
     return jwt.verify(token, env.jwt.accessSecret) as JwtPayload;
 }
 
 export function verifyRefreshToken(token: string): JwtPayload {
     return jwt.verify(token, env.jwt.refreshSecret) as JwtPayload;
+}
+
+export function comparePassword(passwordInput: string, hashedPassword: string) {
+    return bcrypt.compare(passwordInput, hashedPassword);
 }
 
 export function generateOTP(): string {

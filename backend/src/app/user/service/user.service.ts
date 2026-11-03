@@ -1,58 +1,46 @@
 import {Knex} from "knex";
-import {db} from "../../../lib/knex/knex";
 import {injectable} from "tsyringe";
-import {
-    createUser,
-    findUserById,
-    findUserExistsByEmailOrPhone,
-    updateUser
-} from "../repository/users.repo";
-import {UserNotFoundError} from "../errors";
-import {UpdateUserDTO} from "../dto/user.dto";
 import {SystemRole} from "../enums";
-import {hashPassword} from "../../auth/utils";
+import {UserNotFoundError} from "../errors";
 import {UserAlreadyExistsError} from "../../auth/errors";
+import {hashPassword} from "../../auth/utils";
+import {findUserById, findUserExistsByEmailOrPhone, createUser as createUserRepo, updateUser} from "../repository/users.repo";
+import {UpdateUserDTO} from "../dto/user.dto";
+import {User} from "../entity/user.entity";
+import {CreateUserData} from "../types";
 
-export interface CreateUserData {
-    email: string;
-    phone: string;
-    name: string;
-    password: string;
-    systemRole: SystemRole;
-}
 
 @injectable()
 export class UserService {
-    create = async (data: CreateUserData, conn: Knex = db) => {
+    create = async (data: CreateUserData, trx?: Knex | Knex.Transaction): Promise<User> => {
         const existing = await findUserExistsByEmailOrPhone(data.email, data.phone);
-        if(existing){
+        if (existing) {
             throw UserAlreadyExistsError;
         }
-
+        const hashedPassword = data.password ? await hashPassword(data.password) : '';
         const now = new Date();
-        return await createUser({
+        return createUserRepo({
             email: data.email,
             phone: data.phone,
             name: data.name,
-            passwordHash: data.password ? await hashPassword(data.password) : "",
+            passwordHash: hashedPassword,
             systemRole: data.systemRole,
             createdAt: now,
             updatedAt: now,
-        }, conn);
+        }, trx);
     }
 
-    getByUserId = async (id: number) => {
-        const user = await findUserById(id);
-        if(!user){
+    getByUserId = async (userId:number) => {
+        const user = await findUserById(userId);
+        if(!user) {
             throw UserNotFoundError
         }
-
         return {
             id: user.id,
             email: user.email,
             name: user.name,
             phone: user.phone,
-            systemRole: user.systemRole
+            systemRole: user.systemRole,
         }
     }
 
@@ -73,16 +61,11 @@ export class UserService {
 
     getAgentById = async (id: number) => {
         const user = await findUserById(id);
-        if (!user || user.systemRole !== SystemRole.DELIVERY_AGENT) {
+        if (!user) throw UserNotFoundError;
+        if (user.systemRole !== SystemRole.DELIVERY_AGENT) {
             // Use UserNotFoundError to avoid enumeration of other user types.
             throw UserNotFoundError;
         }
-
-        return {
-            id: user.id,
-            name: user.name,
-            phone: user.phone,
-        };
+        return {id: user.id, name: user.name, phone: user.phone};
     }
 }
-

@@ -1,61 +1,58 @@
-import {NextFunction, Request, Response} from "express";
+import {Request, Response, NextFunction} from "express";
 import {ICacheProvider} from "../../pkg/cache/cache.interface";
 import {container} from "../di/container";
 import {TOKENS} from "../di/tokens";
+import {toSeconds} from "../../pkg/utils/time";
+
+const TTL = toSeconds(1, 'd');
 
 interface IdempotencyOptions {
-    strict: boolean;
-    ttl: number;
+    strict?: boolean;
 }
 
-export function idempotency(options: IdempotencyOptions){
-    return async(req: Request, res: Response, next: NextFunction) => {
-        try {
-            if (!["POST", "PATCH", "PUT"].includes(req.method)) {
-                return next();
-            }
+export function idempotency(options: IdempotencyOptions = {}) {
+    const {strict = false} = options;
 
-            const idempotencyKey = req.header("Idempotency-Key");
-            if (!idempotencyKey) {
-                if (options.strict) {
-                    return res.status(400).json({
-                        message: "Idempotency-Key header is required",
-                    });
-                }
-                return next();
-            }
+    return async (req: Request, res: Response, next: NextFunction) => {
+        if (!["POST", "PATCH", "PUT"].includes(req.method)) {
+            return next();
+        }
 
-            const cacheProvider: ICacheProvider = container.resolve(TOKENS.CacheProvider);
-            if (!cacheProvider) {
-                if (!options.strict) {
-                    return next();
-                }
-                return res.status(503).json({
-                    message: "cannot resolve caching service"
+        const idempotencyKey = req.headers["idempotency-key"] as string | undefined;
+
+        if (!idempotencyKey) {
+            if (strict) {
+                return res.status(400).json({
+                    error: "Missing Idempotency-Key header",
                 });
             }
+            return next();
+        }
 
-            let key = `idempotency:${req.method}:${req.originalUrl}:${idempotencyKey}`;
+        try {
+            const cacheProvider: ICacheProvider = container.resolve(TOKENS.CacheProvider);
+            const key = `idempotency:${req.method}:${req.originalUrl}:${idempotencyKey}`;
+
             const cached = await cacheProvider.get(key);
             if (cached) {
                 return res.status(200).json(JSON.parse(cached));
             }
 
             const originalJson = res.json.bind(res);
+
             res.json = ((body: any) => {
-                if (res.statusCode >= 200 && res.statusCode < 300) {
-                    cacheProvider.set(key, JSON.stringify(body), options.ttl);
-                }
+                cacheProvider.set(key, JSON.stringify(body), TTL);
                 return originalJson(body);
             });
+
             next();
-        }catch (err){
-            if(!options.strict){
-                next();
+        } catch {
+            if (strict) {
+                return res.status(503).json({
+                    error: "Idempotency service unavailable",
+                });
             }
-            return res.status(503).json({
-                message: "Idempotency service unavailable"
-            });
+            next();
         }
-    }
+    };
 }

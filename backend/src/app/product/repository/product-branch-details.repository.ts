@@ -1,4 +1,4 @@
-import {Knex} from "knex";
+import type {Knex} from "knex";
 import {db} from "../../../lib/knex/knex";
 import {ProductBranchDetails} from "../entity/product-branch-details.entity";
 
@@ -15,7 +15,12 @@ function toEntity(row: any): ProductBranchDetails {
     });
 }
 
-export async function updateBranchDetails(branchId: number, productId: number, data: {price?: number, stock?: number, isAvailable?: boolean}, conn: Knex = db): Promise<ProductBranchDetails> {
+export async function updateBranchDetails(
+    branchId: number,
+    productId: number,
+    data: {price?: number; stock?: number; isAvailable?: boolean},
+    conn: Knex = db,
+): Promise<ProductBranchDetails> {
     const [row] = await conn("product_branch_details")
         .where("branch_id", branchId)
         .where("product_id", productId)

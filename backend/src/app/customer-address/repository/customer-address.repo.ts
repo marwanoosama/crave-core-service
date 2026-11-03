@@ -53,28 +53,26 @@ export async function createAddress(address: Partial<CustomerAddress>): Promise<
         lat: address.lat,
         lng: address.lng,
         is_default: address.isDefault,
-        created_at: new Date(),
     }).returning(ADDRESS_COLUMNS);
 
     return toEntity(row);
 }
 
 export async function updateAddress(id: number, data: Record<string, any>): Promise<CustomerAddress> {
-    const mapped: Record<string, any> = {};
-    if (data.label !== undefined) mapped.label = data.label;
-    if (data.country !== undefined) mapped.country = data.country;
-    if (data.city !== undefined) mapped.city = data.city;
-    if (data.street !== undefined) mapped.street = data.street;
-    if (data.building !== undefined) mapped.building = data.building;
-    if (data.apartmentNumber !== undefined) mapped.apartment_number = data.apartmentNumber;
-    if (data.type !== undefined) mapped.type = data.type;
-    if (data.lat !== undefined) mapped.lat = data.lat;
-    if (data.lng !== undefined) mapped.lng = data.lng;
-    if (data.isDefault !== undefined) mapped.is_default = data.isDefault;
-
     const [row] = await db("customer_addresses")
         .where("id", id)
-        .update(mapped)
+        .update({
+            label: data.label,
+            country: data.country,
+            city: data.city,
+            street: data.street,
+            building: data.building,
+            apartment_number: data.apartmentNumber,
+            type: data.type,
+            lat: data.lat,
+            lng: data.lng,
+            is_default: data.isDefault,
+        })
         .returning(ADDRESS_COLUMNS);
 
     return toEntity(row);

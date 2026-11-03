@@ -15,7 +15,7 @@ export class Branch {
     createdAt: Date;
     updatedAt: Date;
     deliveryRadius: number; // km
-    deliveryFee: number; // minor units of the branch currency
+    deliveryFee: number; // minor units of currency
     currency: Currency
     commission: number;
     location?: String;

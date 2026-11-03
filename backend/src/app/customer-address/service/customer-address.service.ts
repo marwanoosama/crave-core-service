@@ -1,3 +1,4 @@
+import {injectable} from "tsyringe";
 import {AddressNotFoundError} from "../errors";
 import {
     findAddressesByUserId,
@@ -8,7 +9,6 @@ import {
     clearDefaultByUserId,
 } from "../repository/customer-address.repo";
 import {CreateAddressDTO, UpdateAddressDTO} from "../dto/customer-address.dto";
-import {injectable} from "tsyringe";
 
 function toResponse(address: any) {
     return {
@@ -37,7 +37,6 @@ export class CustomerAddressService {
     getById = async (id: number) => {
         const address = await findAddressById(id);
         if (!address) throw AddressNotFoundError;
-
         return {
             id: address.id,
             userId: address.userId,
@@ -45,8 +44,6 @@ export class CustomerAddressService {
             country: address.country,
             city: address.city,
             street: address.street,
-            // order-service calls this `addressText` in its delivery snapshot
-            addressText: address.street,
             building: address.building,
             apartmentNumber: address.apartmentNumber,
             lat: address.lat,
@@ -82,4 +79,3 @@ export class CustomerAddressService {
         await deleteAddress(addressId);
     }
 }
-

@@ -1,11 +1,16 @@
 import {PaginationParams, FilterParams} from "./cursor-pagination";
 
-export function parsePaginationQuery(query : Record<string, any>, allowedSortBy: string[]): PaginationParams {
+const DEFAULT_SORT_BY = 'createdAt';
+
+export function parsePaginationQuery(query: Record<string, any>, allowedSortBy: string[] = ['createdAt']): PaginationParams {
+    const sortBy = allowedSortBy.includes(query.sortBy as string)
+        ? (query.sortBy as string)
+        : DEFAULT_SORT_BY;
+
     return {
-        cursor: query.cursor || null,
-        limit: query.limit ? Math.min(1000, Number(query.limit)) : 20,
-        // whitelist: fall back to the default sort field when sortBy is missing or not allowed
-        sortBy: allowedSortBy.includes(query.sortBy) ? query.sortBy : 'createdAt',
+        cursor: query.cursor as string,
+        limit: Math.min(1000, Number(query.limit)),
+        sortBy,
         sortOrder: query.sortOrder === 'desc' ? 'desc' : 'asc'
     }
 }
@@ -32,16 +37,10 @@ export function parseFilters(query: Record<string, any>, allowedFields: string[]
 
         return Object.entries(fieldFilters)
             .filter(([op]) => allowedOps.has(op))
-            .map(([operator, value]) => {
-                // 'in' accepts comma-separated lists: filter[id][in]=7,9 -> ['7','9']
-                const finalValue = operator === 'in' && typeof value === 'string'
-                    ? value.split(',')
-                    : value;
-                return {
-                    field,
-                    operator: operator as FilterParams['operator'],
-                    value: finalValue as string | string[],
-                };
-            });
+            .map(([operator, value]) => ({
+                field,
+                operator: operator as FilterParams['operator'],
+                value: value as string | string[],
+            }));
     });
 }

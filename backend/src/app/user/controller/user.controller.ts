@@ -1,20 +1,20 @@
-import {UserService} from "../service/user.service";
-import {NextFunction, Response, Request} from "express";
-import {validateBody} from "../../../lib/validation/validation";
-import {UpdateUserDTO} from "../dto/user.dto";
-import {inject, injectable} from "tsyringe";
+import {NextFunction, Request, Response} from "express";
+import {injectable, inject} from "tsyringe";
 import {TOKENS} from "../../../lib/di/tokens";
 import {sendSuccess} from "../../../lib/http/response";
+import {UserService} from "../service/user.service";
+import {validateBody} from "../../../lib/validation/validate";
+import {UpdateUserDTO} from "../dto/user.dto";
 
 @injectable()
 export class UserController {
     constructor(@inject(TOKENS.UserService) private readonly userService: UserService) {}
 
-    getMe = async(req: Request, res: Response, next: NextFunction) => {
-        try{
-            const user = await this.userService.getByUserId(req.user?.userId!);
+    getMe = async(req: Request, res: Response, next : NextFunction) => {
+        try {
+            const user = await this.userService.getByUserId(req.user?.userId!)
             sendSuccess(res, user);
-        }catch(err){
+        } catch (err) {
             next(err);
         }
     }

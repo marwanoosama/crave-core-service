@@ -1,9 +1,9 @@
 declare namespace Express {
     interface Request {
         correlationId?: string;
-        user?:{
+        user?: {
             userId: number;
-            role:string;
+            role: string;
             email: string;
             // for restaurant users only
             restaurantId?: number;

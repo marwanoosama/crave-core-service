@@ -1,9 +1,14 @@
-import {injectable} from "tsyringe";
-
 type LogLevel = 'info' | 'error' | 'warn' | 'debug';
 
-@injectable()
 export class Logger {
+    private static instance: Logger;
+
+    constructor() {
+        if(!Logger.instance) {
+            Logger.instance = this;
+        }
+        return Logger.instance;
+    }
 
     log(level: LogLevel, message: string, metadata: Record<string, unknown> = {}) {
         const logObject = {
@@ -12,7 +17,7 @@ export class Logger {
             timestamp: Date.now(),
             ...metadata
         }
-        // this could call datadog logger
+        // This could call datadog logger
         console.log(JSON.stringify(logObject));
     }
 
@@ -33,5 +38,4 @@ export class Logger {
     }
 }
 
-// Standalone instance for non-DI contexts (the outbox worker, for example).
 export const logger = new Logger();

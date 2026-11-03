@@ -1,11 +1,11 @@
 import {NextFunction, Request, Response} from "express";
-import {NotAuthenticated} from "./errors";
 import {verifyAccessToken} from "../../app/auth/utils";
+import {NotAuthenticated} from "./errors";
 
-export function authenticate(req: Request, res: Response, next: NextFunction){
+export function authenticate(req: Request, res: Response, next: NextFunction) {
     const token = req.cookies.access_token;
-    if(!token){
-        throw NotAuthenticated;
+    if (!token) {
+        throw NotAuthenticated
     }
 
     req.user = verifyAccessToken(token);

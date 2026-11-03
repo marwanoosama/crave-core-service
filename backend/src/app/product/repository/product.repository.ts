@@ -1,4 +1,3 @@
-import {Knex} from "knex";
 import {db} from "../../../lib/knex/knex";
 import {Product} from "../entity/product.entity";
 
@@ -18,16 +17,15 @@ function toEntity(row: any): Product {
     });
 }
 
-export async function createProduct(data: Partial<Product>, conn: Knex = db): Promise<Product> {
-    const now = new Date();
-    const [row] = await conn("products").insert({
+export async function createProduct(data: Partial<Product>): Promise<Product> {
+    const [row] = await db("products").insert({
         name: data.name,
         description: data.description,
         image_url: data.imageUrl,
         restaurant_id: data.restaurantId,
         category_id: data.categoryId,
-        created_at: now,
-        updated_at: now,
+        created_at: data.createdAt ?? new Date(),
+        updated_at: data.updatedAt ?? new Date(),
     }).returning(PRODUCT_COLUMNS);
     return toEntity(row);
 }
@@ -81,8 +79,8 @@ export async function findProductsByBranch(branchId: number) {
     }));
 }
 
-export async function updateProduct(id: number, data: Record<string, any>, conn: Knex = db): Promise<Product> {
-    const [row] = await conn("products").where("id", id).update({
+export async function updateProduct(id: number, data: Record<string, any>): Promise<Product> {
+    const [row] = await db("products").where("id", id).update({
         name: data.name,
         description: data.description,
         image_url: data.imageUrl,

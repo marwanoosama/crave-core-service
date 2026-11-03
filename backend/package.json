@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc",
-    "dev": "tsx watch src/server",
+    "dev": "tsx src/server",
     "start": "node dist/server.js",
     "worker:dev": "tsx watch src/worker",
     "worker": "node dist/worker.js",

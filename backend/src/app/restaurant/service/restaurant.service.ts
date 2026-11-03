@@ -12,6 +12,7 @@ import {Knex} from "knex";
 import {OwnerAlreadyExistsError, RestaurantNotFoundError, UnAuthorizedError} from "../errors";
 import {SystemRole} from "../../user/enums";
 import {findUserExistsByEmailOrPhone} from "../../user/repository/users.repo";
+import {findBranchesByRestaurant} from "../../branch/repository/branch.repository";
 import {UserService} from "../../user/service/user.service";
 import {RestaurantMemberService} from "../../rbac/service/restaurant-member.service";
 import {CreateRestaurantDTO, UpdateRestaurantDTO, UpdateRestaurantStatusDTO} from "../dto/restaurant.dto";
@@ -141,11 +142,14 @@ export class RestaurantService{
             const updated = await updateRestaurantStatus(id, data.status, trx);
 
             if (data.status === RestaurantStatus.SUSPENDED) {
+                // branchIds ride along so order-service can drop its cached
+                // branch rows (they denormalise restaurantStatus).
+                const branches = await findBranchesByRestaurant(id);
                 await insertOutboxEvent(trx, {
                     aggregateType: "restaurants",
                     aggregateId: id,
                     eventType: EVENT_TYPES.RESTAURANT_SUSPENDED,
-                    payload: {restaurantId: id},
+                    payload: {restaurantId: id, branchIds: branches.map((b) => Number(b.id))},
                 });
             }
 

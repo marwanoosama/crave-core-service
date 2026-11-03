@@ -48,3 +48,9 @@ productRouter.post('/internal/branches/:id/reserve-stock',
     idempotency({strict: false, ttl: toSeconds(1, 'h')}),
     productController.reserveStock
 );
+// Idempotent via Idempotency-Key so stock-release retries never double-increment stock.
+productRouter.post('/internal/branches/:id/release-stock',
+    requireInternalApiKey,
+    idempotency({strict: false, ttl: toSeconds(1, 'h')}),
+    productController.releaseStock
+);

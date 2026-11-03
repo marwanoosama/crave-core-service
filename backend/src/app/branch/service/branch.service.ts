@@ -2,8 +2,7 @@ import {CreateBranchDTO, UpdateBranchDTO, UpdateBranchStatusDTO} from "../dto/br
 import {SystemRole} from "../../user/enums";
 import {findById} from "../../restaurant/repository/restaurant.repo";
 import {RestaurantNotFoundError, UnAuthorizedError} from "../../restaurant/errors";
-import {
-    createBranch,
+import {createBranch,
     findBranchById,
     findBranchesByRestaurant,
     findNearbyBranches,
@@ -38,6 +37,7 @@ export class BranchService{
         return {
             branch,
             restaurantStatus: restaurant?.status ?? "unknown",
+            restaurantOwnerId: restaurant?.ownerId == null ? null : Number(restaurant.ownerId),
         };
     }
 

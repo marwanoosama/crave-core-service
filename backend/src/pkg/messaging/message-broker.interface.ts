@@ -1,23 +1,6 @@
-export interface ConsumeMessage {
-    routingKey: string;
-    body: Buffer;
-    ack(): void;
-    nack(requeue?: boolean): void;
-}
-
-export interface ConsumerOptions {
-    queue: string;
-    exchange: string;
-    bindingKeys: string[];
-    deadLetterExchange?: string;
-    deadLetterQueue?: string;
-    prefetch: number;
-}
-
 export interface IMessageBroker {
     connect(): Promise<void>;
     close(): Promise<void>;
-    declareTopology(opts: ConsumerOptions): Promise<void>; // creates/configures exchanges, queues, and their bindings
-    consume(opts: ConsumerOptions, handler: (msg: ConsumeMessage) => Promise<void>): Promise<void>;
-    publish(exchange: string, routingKey: string, body: Buffer): Promise<void>;
+    declareExchange(exchange: string): Promise<void>; // ensure that an exchange exists (which routes messages to queues)
+    publishConfirmed(exchange: string, routingKey: string, body: Buffer): Promise<void>;
 }

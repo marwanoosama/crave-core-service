@@ -9,7 +9,7 @@ import {drainOutbox} from "./lib/events/outbox-drain";
 /**
  * Outbox worker — runs independently of the HTTP server.
  *
- * API instances write to `events_outbox` in the same trx as their domain
+* API instances write to `events_outbox` in the same trx as their domain
  * mutation. This worker process polls that table on a schedule and publishes
  * pending rows to RabbitMQ with publisher confirms. Scales horizontally: the
  * repository's `claimBatch` uses FOR UPDATE SKIP LOCKED so N workers can run

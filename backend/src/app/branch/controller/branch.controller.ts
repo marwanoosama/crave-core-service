@@ -69,11 +69,12 @@ export class BranchController{
             const result = await this.branchService.findByIdWithRestaurant(Number(req.params.id));
             if (!result) throw BranchNotFoundError;
 
-            const {branch, restaurantStatus} = result;
+            const {branch, restaurantStatus, restaurantOwnerId} = result;
             sendSuccess(res, {
                 id: branch.id,
                 region: branch.countryCode,
                 restaurantId: branch.restaurantId,
+                restaurantOwnerId,
                 restaurantStatus,
                 acceptOrders: branch.acceptOrders,
                 isActive: branch.isActive,

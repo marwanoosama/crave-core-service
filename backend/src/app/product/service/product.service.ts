@@ -181,6 +181,72 @@ export class ProductService {
     }
 
     /**
+     * Atomically increments branch stock for each item — reverse of reserveStock.
+     * Used by order-service when an order placement fails after stock was
+     * reserved (DB rollback, payment init failure). Unknown products are
+     * skipped (release is best-effort). Writes product.stock.changed to the
+     * outbox in the same trx.
+     */
+    releaseStock = async (branchId: number, items: ReserveStockInput[]): Promise<ReserveStockResult> => {
+        const sanitized = items
+            .map((item) => ({
+                productId: Number(item.productId),
+                quantity: Number(item.quantity),
+            }))
+            .filter((item) => Number.isInteger(item.productId) && Number.isInteger(item.quantity) && item.quantity > 0);
+
+        if (sanitized.length !== items.length) {
+            throw InvalidReserveItemsError;
+        }
+
+        const productIds = sanitized.map((item) => item.productId);
+        const trx = await db.transaction();
+
+        try {
+            const rows = await trx("product_branch_details")
+                .where("branch_id", branchId)
+                .whereIn("product_id", productIds)
+                .select("product_id", "stock")
+                .forUpdate();
+
+            const byProduct = new Map<number, number>();
+            for (const row of rows) {
+                byProduct.set(Number(row.product_id), Number(row.stock));
+            }
+
+            // Compute the new stock per item; skip unknown products (release is best-effort).
+            const applied: ReserveStockApplied[] = [];
+            for (const item of sanitized) {
+                const current = byProduct.get(item.productId);
+                if (current === undefined) continue;
+                applied.push({productId: item.productId, newStock: current + item.quantity});
+            }
+
+            for (const item of applied) {
+                await trx("product_branch_details")
+                    .where("branch_id", branchId)
+                    .where("product_id", item.productId)
+                    .update({stock: item.newStock});
+            }
+
+            for (const item of applied) {
+                await insertOutboxEvent(trx, {
+                    aggregateType: "product_branch_details",
+                    aggregateId: `${branchId}:${item.productId}`,
+                    eventType: EVENT_TYPES.PRODUCT_STOCK_CHANGED,
+                    payload: {branchId, productId: item.productId, newStock: item.newStock},
+                });
+            }
+
+            await trx.commit();
+            return {ok: true, applied};
+        } catch (error) {
+            await trx.rollback();
+            throw error;
+        }
+    }
+
+    /**
      * Atomically decrements branch stock for each item. Locks the rows FOR UPDATE
      * and writes product.stock.changed to the outbox in the same trx so
      * order-service invalidates its cached price/stock projections.

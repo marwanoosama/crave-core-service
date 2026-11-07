@@ -39,6 +39,7 @@ export class RabbitMQClient implements IMessageBroker {
         this.connection = null;
     }
 
+    // create an exchange of type topic
     async declareExchange(exchange: string): Promise<void> {
         if (!this.channel) await this.connect();
         await this.channel!.addSetup((ch: ConfirmChannel) =>

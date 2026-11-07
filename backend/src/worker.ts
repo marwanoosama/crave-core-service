@@ -14,7 +14,8 @@ import {drainOutbox} from "./lib/events/outbox-drain";
  * pending rows to RabbitMQ with publisher confirms. Scales horizontally: the
  * repository's `claimBatch` uses FOR UPDATE SKIP LOCKED so N workers can run
  * in parallel without duplicate publishes.
- */
+ * */
+
 async function main() {
     try {
         await messageBroker.connect();
@@ -27,6 +28,7 @@ async function main() {
     }
 
     const pattern = env.rabbit.drainCron;
+    // creates and starts the scheduled job
     const job = new Cron(pattern, {protect: true}, async () => {
         try {
             await drainOutbox();

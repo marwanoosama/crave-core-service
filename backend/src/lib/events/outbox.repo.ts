@@ -45,13 +45,19 @@ export async function claimBatch(conn: Knex, limit: number): Promise<OutboxRow[]
         .whereNull("dispatched_at")
         .orderBy("id", "asc")
         .limit(limit)
-        .forUpdate()
-        .skipLocked();
+        .forUpdate() // locking selected rows until trx commits or rollbacks
+        .skipLocked(); // in case of more than one worker
     return rows as OutboxRow[];
 }
 
 export async function markDispatched(conn: Knex, id: string): Promise<void> {
     await conn("events_outbox").where({id}).update({dispatched_at: new Date()});
+}
+
+export async function bulkMarkDispatched(conn: Knex, ids: string[]): Promise<void> {
+    if (ids.length === 0) return;
+
+    await conn("events_outbox").whereIn("id", ids).update({ dispatched_at: new Date() });
 }
 
 export async function markFailed(conn: Knex, id: string, err: string): Promise<void> {

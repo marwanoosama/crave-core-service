@@ -2,7 +2,7 @@ import {db} from "../knex/knex";
 import {env} from "../config/env";
 import {logger} from "../logger/logger";
 import {messageBroker} from "./init";
-import {claimBatch, markDispatched, markFailed} from "./outbox.repo";
+import {bulkMarkDispatched, claimBatch, markDispatched, markFailed} from "./outbox.repo";
 
 /**
  * One pass over the outbox: claim a batch with FOR UPDATE SKIP LOCKED, publish
@@ -14,6 +14,7 @@ import {claimBatch, markDispatched, markFailed} from "./outbox.repo";
  * with respect to itself thanks to SKIP LOCKED, so running more than one worker
  * in parallel is safe.
  */
+
 export async function drainOutbox(): Promise<void> {
     await messageBroker.connect().catch(() => {});
 
@@ -25,6 +26,7 @@ export async function drainOutbox(): Promise<void> {
             return;
         }
 
+        const dispatchedIds: string[] = [];
         for (const row of rows) {
             const envelope = {
                 eventId: row.event_id,
@@ -40,7 +42,7 @@ export async function drainOutbox(): Promise<void> {
                     row.event_type,
                     Buffer.from(JSON.stringify(envelope), "utf8"),
                 );
-                await markDispatched(trx, row.id);
+                dispatchedIds.push(row.id);
             } catch (err) {
                 const msg = describeError(err);
                 await markFailed(trx, row.id, msg);
@@ -48,7 +50,8 @@ export async function drainOutbox(): Promise<void> {
                 break;
             }
         }
-        // bulk update for dispatched and bulk update for failed
+
+        await bulkMarkDispatched(trx, dispatchedIds);
 
         await trx.commit();
     } catch (err) {

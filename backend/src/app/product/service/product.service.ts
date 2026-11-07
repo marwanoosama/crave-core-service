@@ -1,4 +1,3 @@
-import {Knex} from "knex";
 import {injectable} from "tsyringe";
 import {UnAuthorisedError} from "../../../lib/auth/errors";
 import {RestaurantNotFoundError} from "../../restaurant/errors";
@@ -16,9 +15,9 @@ import {
     ReserveStockApplied,
     OutOfStockItem,
 } from "../types";
-import {createProduct, findProductById, findProductsByBranch, findProductsByRestaurant, updateProduct} from "../repository/product.repository";
+import {createProduct, findProductById, findProductsByBranch, findProductsByRestaurant, findProductsByBranchAndIds, updateProduct} from "../repository/product.repository";
 import {findCategoryByName, findCategoriesByRestaurant, createCategory} from "../repository/category.repository";
-import {updateBranchDetails} from "../repository/product-branch-details.repository";
+import {bulkUpdateStock, lockBranchDetails, updateBranchDetails} from "../repository/product-branch-details.repository";
 
 @injectable()
 export class ProductService {
@@ -144,27 +143,7 @@ export class ProductService {
 
     findByBranchAndIds = async (branchId: number, productIds: number[]): Promise<BranchProductRow[]> => {
         if (productIds.length === 0) return [];
-        const rows = await db("product_branch_details as pbd")
-            .join("products as p", "p.id", "pbd.product_id")
-            .where("pbd.branch_id", branchId)
-            .whereIn("pbd.product_id", productIds)
-            .whereNull("p.deleted_at")
-            .select(
-                "pbd.product_id",
-                "p.name",
-                "p.image_url",
-                "pbd.price",
-                "pbd.stock",
-                "pbd.is_available",
-            );
-        return rows.map((r: any) => ({
-            productId: r.product_id,
-            name: r.name,
-            imageUrl: r.image_url,
-            price: r.price,
-            stock: r.stock,
-            isAvailable: r.is_available,
-        }));
+        return await findProductsByBranchAndIds(branchId, productIds);
     }
 
     /**
@@ -179,14 +158,10 @@ export class ProductService {
         const trx = await db.transaction();
         try {
             // Lock + read current stock for the targeted rows in one round-trip.
-            const rows = await trx("product_branch_details")
-                .where("branch_id", branchId)
-                .whereIn("product_id", productIds)
-                .select("product_id", "stock")
-                .forUpdate();
+            const rows = await lockBranchDetails(trx, branchId, productIds);
 
             const byProduct = new Map<number, number>();
-            for (const r of rows) byProduct.set(Number(r.product_id), Number(r.stock));
+            for (const r of rows) byProduct.set(r.productId, r.stock);
 
             // Compute the new stock per item; skip unknown products (release is best-effort).
             const applied: ReserveStockApplied[] = [];
@@ -225,14 +200,10 @@ export class ProductService {
 
         const trx = await db.transaction();
         try {
-            const rows = await trx("product_branch_details")
-                .where("branch_id", branchId)
-                .whereIn("product_id", productIds)
-                .select("product_id", "stock", "is_available")
-                .forUpdate();
+            const rows = await lockBranchDetails(trx, branchId, productIds);
 
             const byProduct = new Map<number, {stock: number; isAvailable: boolean}>();
-            for (const r of rows) byProduct.set(Number(r.product_id), {stock: Number(r.stock), isAvailable: !!r.is_available});
+            for (const r of rows) byProduct.set(r.productId, {stock: r.stock, isAvailable: r.isAvailable});
 
             const offending: OutOfStockItem[] = [];
             const applied: ReserveStockApplied[] = [];
@@ -278,31 +249,4 @@ function sanitizeStockItems(items: ReserveStockInput[]): ReserveStockInput[] {
         throw InvalidReserveItemsError;
     }
     return sanitized;
-}
-
-/**
- * Single UPDATE that sets product_branch_details.stock from a derived VALUES
- * table — one row, regardless of how many items.
- *
- *   UPDATE product_branch_details AS pbd
- *   SET stock = v.new_stock
- *   FROM (VALUES (1, 5), (2, 7)) AS v(product_id, new_stock)
- *   WHERE pbd.branch_id = ? AND pbd.product_id = v.product_id;
- */
-async function bulkUpdateStock(trx: Knex.Transaction, branchId: number, applied: ReserveStockApplied[]): Promise<void> {
-    if (applied.length === 0) return;
-
-    const placeholders = applied.map(() => "(?, ?)").join(",");
-    const bindings: (number | string)[] = [];
-    for (const a of applied) bindings.push(a.productId, a.newStock);
-    bindings.push(branchId);
-    // Casts are required: parameters inside VALUES default to `text`, which
-    // breaks `pbd.product_id (bigint) = v.product_id` and `SET stock (int) = v.new_stock`.
-    await trx.raw(
-        `UPDATE product_branch_details AS pbd
-         SET stock = v.new_stock::int
-         FROM (VALUES ${placeholders}) AS v(product_id, new_stock)
-         WHERE pbd.branch_id = ? AND pbd.product_id = v.product_id::bigint`,
-        bindings,
-    );
 }

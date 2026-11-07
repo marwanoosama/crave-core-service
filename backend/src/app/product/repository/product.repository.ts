@@ -1,5 +1,6 @@
 import {db} from "../../../lib/knex/knex";
 import {Product} from "../entity/product.entity";
+import {BranchProductRow} from "../types";
 
 const PRODUCT_COLUMNS = ['id', 'name', 'description', 'image_url', 'restaurant_id', 'category_id', 'created_at', 'updated_at', 'deleted_at'];
 
@@ -76,6 +77,31 @@ export async function findProductsByBranch(branchId: number) {
         price: row.price,
         stock: row.stock,
         isAvailable: row.is_available,
+    }));
+}
+
+export async function findProductsByBranchAndIds(branchId: number, productIds: number[]): Promise<BranchProductRow[]> {
+    if (productIds.length === 0) return [];
+    const rows = await db("product_branch_details as pbd")
+        .join("products as p", "p.id", "pbd.product_id")
+        .where("pbd.branch_id", branchId)
+        .whereIn("pbd.product_id", productIds)
+        .whereNull("p.deleted_at")
+        .select(
+            "pbd.product_id",
+            "p.name",
+            "p.image_url",
+            "pbd.price",
+            "pbd.stock",
+            "pbd.is_available",
+        );
+    return rows.map((r: any) => ({
+        productId: r.product_id,
+        name: r.name,
+        imageUrl: r.image_url,
+        price: r.price,
+        stock: r.stock,
+        isAvailable: r.is_available,
     }));
 }
 
